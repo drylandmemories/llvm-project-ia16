@@ -1,0 +1,10 @@
+# RUN: %python %S/../../../utils/ia16-mc-acceptance.py --self-test | FileCheck %s
+# RUN: rm -rf %t.existing
+# RUN: mkdir %t.existing
+# RUN: not %python %S/../../../utils/ia16-mc-acceptance.py \
+# RUN:   --build-dir %t.missing --output-dir %t.existing 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=FRESH
+
+# CHECK: IA16-MC-FAIL-CLOSED-SELF-TEST: PASS
+# CHECK: IA16-MC-MATRIX-SELF-TEST: PASS
+# FRESH: error: output directory already exists:
