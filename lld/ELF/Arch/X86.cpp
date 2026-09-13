@@ -349,7 +349,11 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write16le(loc, val);
     break;
   case R_386_SUB32:
-    write32le(loc, rel.addend - (val - rel.addend));
+    // Recover the unsigned ELF32 symbol address from the sign-extended S+A
+    // before checking the standalone signed A-S expression.
+    val = rel.addend - static_cast<uint32_t>(val - rel.addend);
+    checkInt(ctx, loc, val, 32, rel);
+    write32le(loc, val);
     break;
   case R_386_32:
   case R_386_GOT32:
