@@ -37,7 +37,7 @@ proof is absent or incomplete; it does not mean the implementation is absent.
 | G1-ABI | Versioned ABI spec covers layouts, frames, preserved registers, returns, variadics, all pointer/call forms, segment assumptions, interrupts, and all six models. | pending audit |
 | G1-TRIPLE | Parser unit tests and driver/lit tests prove both triples, DOS classification, CPU/tune aliases, model/mode options, data layouts, macros, and diagnostics. | partial selected parser/driver baseline; full option/diagnostic matrix pending |
 | G1-MC | Per-CPU positive and rejection tests plus executable opcode scans prove genuine 8086/8088/80186/80188/80286 generation and reject all post-286 resources. | bounded matrix passed at `6826ec878258c71da4c7355f6bb8544ac56476c1`: 4 selected tests, 73 instructions, 157 executable bytes, 10 load regions, 50 rejection cases, and injected `64`-`67` scanner checks; broad integration/runtime not claimed |
-| G1-SEGELF | MC, ELF writer/parser, and LLD tests prove `R_386_SEG16`, `R_386_SUB16`, `R_386_SUB32`, `R_386_HUGE8`, malformed cases, overflow, retention, and semantics. | partial at `e8f2ae8337314fb20590411eab0c8e519c837df2`: prior protected/real-mode, SEG16, allocated-pair, and standalone SUB16 evidence remains accepted; the repaired non-SHF_ALLOC adjacent `R_386_16`/`R_386_SUB16` expression passed a focused 1/1 test, the accepted five-test slice passed 5/5, a retained ELF32 object proves flags and relocation order, linked bytes are ABI-required `0x003d`, and exact-candidate nonauthor review found no issue; standalone `R_386_SUB32` signed overflow is independently accepted at `b97d22e1214266e0f9164e34bb28ab05b4880cc1`: 7/7 retained LLD regressions, ELF32 symbol recovery, -2147483648 accepted as `0x80000000`, -2147483649 rejected with zero/negative addends, original failing fixture rejected, and relocation retention verified; cumulative allocated `R_386_32`/`R_386_SUB32` overflow is independently accepted at `e8f2ae8337314fb20590411eab0c8e519c837df2`: its regression failed before the fix, exact -2147483648 succeeds as `0x80000000`, -2147483649 is diagnosed for zero/positive/negative cumulative addends, focused 1/1 and selected 8/8 LLD tests pass, and ELF32 relocation order, linked bytes, hashes, build identity, and nonauthor review are retained; at `77e1c078e2f39ed1cce837411065ddd0f9badaed`, the retained 8/8 LLD tests pass and standalone HUGE8 controls pass, but allocated cumulative R_386_8/HUGE8 writes 03 instead of required 05 for A=0, first S=18, second S=3; the nonallocated control writes 05; acceptance stopped at this defect, with malformed cases, remaining overflow/retention, and broader acceptance pending |
+| G1-SEGELF | MC, ELF writer/parser, and LLD tests prove `R_386_SEG16`, `R_386_SUB16`, `R_386_SUB32`, `R_386_HUGE8`, malformed cases, overflow, retention, and semantics. | partial at `e8f2ae8337314fb20590411eab0c8e519c837df2`: prior protected/real-mode, SEG16, allocated-pair, and standalone SUB16 evidence remains accepted; the repaired non-SHF_ALLOC adjacent `R_386_16`/`R_386_SUB16` expression passed a focused 1/1 test, the accepted five-test slice passed 5/5, a retained ELF32 object proves flags and relocation order, linked bytes are ABI-required `0x003d`, and exact-candidate nonauthor review found no issue; standalone `R_386_SUB32` signed overflow is independently accepted at `b97d22e1214266e0f9164e34bb28ab05b4880cc1`: 7/7 retained LLD regressions, ELF32 symbol recovery, -2147483648 accepted as `0x80000000`, -2147483649 rejected with zero/negative addends, original failing fixture rejected, and relocation retention verified; cumulative allocated `R_386_32`/`R_386_SUB32` overflow is independently accepted at `e8f2ae8337314fb20590411eab0c8e519c837df2`: its regression failed before the fix, exact -2147483648 succeeds as `0x80000000`, -2147483649 is diagnosed for zero/positive/negative cumulative addends, focused 1/1 and selected 8/8 LLD tests pass, and ELF32 relocation order, linked bytes, hashes, build identity, and nonauthor review are retained; at `77e1c078e2f39ed1cce837411065ddd0f9badaed`, the retained 8/8 LLD tests pass and standalone HUGE8 controls pass, but allocated cumulative R_386_8/HUGE8 writes 03 instead of required 05 for A=0, first S=18, second S=3; the nonallocated control writes 05; acceptance stopped at this defect; cumulative HUGE8 is subsequently independently accepted at `7396eca6f0115a46829c2fba941a093a77215623`: failing-before regression, exact-candidate build and 9/9 LLD regressions, matching allocated/nonallocated bytes, signed addend controls, three-relocation chain, standalone controls, preceding R_386_8 overflow, ELF32 object and ordered retained relocations; malformed cases, remaining overflow/retention, and broader acceptance remain pending |
 | G1-DIFF | Frozen gcc-ia16 `20240218` fixtures establish compatible cdecl/source behavior without copied implementation. | pending |
 | G2-CODEGEN | SelectionDAG legality, register/address constraints, lowering categories, branch relaxation, compiler-rt closure, and tiny/small freestanding programs pass for 8086. | partial historical evidence; full matrix pending |
 | G3-CLANG | TargetInfo, data model, qualifiers/address spaces, builtins, attributes, ABI lowering, diagnostics, and optimizer-safety tests pass. | pending complete interface audit |
@@ -60,18 +60,18 @@ initial release must not be described as implementing these items.
 
 ## Next acceptance outcome
 
-Repair allocated cumulative HUGE8 addend handling in a separate bounded task.
-The acceptance-only task at `77e1c078e2f39ed1cce837411065ddd0f9badaed`
-retains exact commands, object/linked bytes, relocation order, tool hashes and
-8/8 selected regression results in
-`remaining-gate1-segelf-after-cumulative-sub32-artifex-v1/evidence` under
+Resume the remaining Gate 1 SEGELF matrix after the independently reviewed
+cumulative HUGE8 repair at `7396eca6f0115a46829c2fba941a093a77215623`.
+Exact commands, build, objects, bytes, tool hashes, nine selected regression
+results and nonauthor review are retained in
+`repair-cumulative-huge8-artifex-v1/evidence` under
 `/Users/tedbullock/Developer/llvm-ia16-tasks`.
-An allocated R_386_8(S=18)/R_386_HUGE8(S=3) same-offset expression with A=0
-writes 03 instead of ABI-required 05; the nonallocated control writes 05.
-No implementation was changed by acceptance. After independently reviewed repair,
-resume the remaining SEGELF matrix, then the other Gate 1 requirements in roadmap
-dependency order. Preserve all eight accepted linker regressions and historical
-repair evidence. This register is factual routing, not continuation authority;
-the unchanged assignment and complete user request carry that authority.
-Do not claim Gate 1 completion until every registered requirement independently
-passes one exact candidate. Gates 2–5 and external consequences remain excluded.
+Preserve all nine accepted linker regressions and historical repair evidence.
+Acceptance must cover remaining malformed cases, overflow, retention and the
+assembler/writer/parser/linker requirements; then advance through the other
+Gate 1 requirements in roadmap dependency order. Acceptance-only tasks checkpoint
+new implementation defects and dispatch separate bounded repairs.
+This register is factual routing, not continuation authority; the unchanged
+assignment and complete user request carry that authority. Do not claim Gate 1
+completion until every registered requirement independently passes one exact
+candidate. Gates 2–5 and external consequences remain excluded.
