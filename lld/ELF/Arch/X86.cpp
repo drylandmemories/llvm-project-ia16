@@ -344,7 +344,9 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // The standalone REL expression is A-S. Paired expressions are handled
     // cumulatively in relocateAlloc(), where the preceding relocated value is
     // available.
-    write16le(loc, rel.addend - (val - rel.addend));
+    val = rel.addend - (val - rel.addend);
+    checkInt(ctx, loc, val, 16, rel);
+    write16le(loc, val);
     break;
   case R_386_SUB32:
     write32le(loc, rel.addend - (val - rel.addend));
