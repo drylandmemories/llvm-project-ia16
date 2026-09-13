@@ -26,6 +26,7 @@ class IA16TargetLowering final : public TargetLowering {
 public:
   IA16TargetLowering(const TargetMachine &TM, const IA16Subtarget &STI);
 
+  bool areJTsAllowed(const Function *) const override { return false; }
   const char *getTargetNodeName(unsigned Opcode) const override;
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
     return MVT::i8;

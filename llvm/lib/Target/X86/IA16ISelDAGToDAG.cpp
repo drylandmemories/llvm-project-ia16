@@ -147,6 +147,13 @@ public:
       CurDAG->SelectNodeTo(N, X86::LEA16r, MVT::i16, Ops);
       return;
     }
+    case ISD::GlobalAddress: {
+      auto *GA = cast<GlobalAddressSDNode>(N);
+      SDValue Address = CurDAG->getTargetGlobalAddress(
+          GA->getGlobal(), DL, MVT::i16, GA->getOffset());
+      CurDAG->SelectNodeTo(N, X86::MOV16ri, MVT::i16, Address);
+      return;
+    }
     case ISD::Constant: {
       auto *C = cast<ConstantSDNode>(N);
       EVT VT = N->getValueType(0);
