@@ -200,7 +200,24 @@ def classify_instruction(raw: list[int], selected_cpu: str) -> dict[str, Any]:
     elif raw[index] == 0x0F:
         if index + 1 >= len(raw):
             rank, reason = 3, "truncated 0F escape"
-        elif raw[index + 1] in {0x00, 0x01, 0x02, 0x03, 0x06}:
+        elif raw[index + 1] in {0x00, 0x01}:
+            if index + 2 >= len(raw):
+                rank, reason = 3, "truncated 80286 0F group"
+            else:
+                extension = (raw[index + 2] >> 3) & 7
+                allowed = (
+                    extension <= 5
+                    if raw[index + 1] == 0x00
+                    else extension in {0, 1, 2, 3, 4, 6}
+                )
+                rank, reason = (
+                    (2, "80286 0F group opcode")
+                    if allowed
+                    else (3, "post-286 or unassigned 0F group extension")
+                )
+        elif raw[index + 1] in {0x02, 0x03} and index + 2 < len(raw):
+            rank, reason = 2, "80286 0F opcode"
+        elif raw[index + 1] == 0x06:
             rank, reason = 2, "80286 0F opcode"
         else:
             rank, reason = 3, "post-286 0F opcode"
@@ -290,6 +307,9 @@ def self_test() -> None:
     assert classify_instruction([0xC1, 0xE0, 0x02], "i80186")["allowed"]
     assert not classify_instruction([0x0F, 0x01, 0x17], "i80186")["allowed"]
     assert classify_instruction([0x0F, 0x01, 0x17], "i80286")["allowed"]
+    assert not classify_instruction([0x0F, 0x00, 0xF0], "i80286")["allowed"]
+    assert not classify_instruction([0x0F, 0x01, 0xE8], "i80286")["allowed"]
+    assert not classify_instruction([0x0F, 0x01, 0x38], "i80286")["allowed"]
     for prefix in PREFIXES_POST_286:
         assert not classify_instruction([prefix, 0x90], "i80286")["allowed"]
     sample = "100: 90 nop\n101: c3 retw\n"
