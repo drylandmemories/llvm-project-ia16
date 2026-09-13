@@ -36,3 +36,21 @@ IA16Subtarget::IA16Subtarget(const Triple &TT, StringRef CPU,
   if (CPUKind == IA16::CPUKind::Invalid)
     report_fatal_error("invalid IA-16 CPU");
 }
+
+unsigned IA16Subtarget::getHwModeSet() const {
+  // X86_IA16 is the third non-default mode declared in
+  // X86InstrPredicates.td.
+  return 1U << 2;
+}
+
+unsigned IA16Subtarget::getHwMode(HwModeType Type) const {
+  switch (Type) {
+  case HwMode_Default:
+  case HwMode_RegInfo:
+    return 3;
+  case HwMode_ValueType:
+  case HwMode_EncodingInfo:
+    return 0;
+  }
+  llvm_unreachable("unexpected IA-16 hardware mode type");
+}

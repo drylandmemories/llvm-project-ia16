@@ -41,6 +41,12 @@ public:
   }
   bool is286() const { return CPUKind == IA16::CPUKind::I80286; }
 
+  // X86's generated HwMode implementation assumes that every instance is an
+  // X86Subtarget.  IA-16 deliberately has a separate subtarget class while
+  // sharing the register descriptions, so provide the IA-16 mode directly.
+  unsigned getHwModeSet() const override;
+  unsigned getHwMode(HwModeType Type = HwMode_Default) const override;
+
   const IA16InstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const IA16RegisterInfo *getRegisterInfo() const override {
     return &InstrInfo.getRegisterInfo();

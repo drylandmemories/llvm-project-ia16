@@ -74,10 +74,12 @@ bool IA16RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
   bool HasFP = MF.getFrameInfo().getObjectIndexBegin() < 0;
   int64_t Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
-  if (HasFP && FrameIndex < 0)
-    Offset += 2; // Saved BP is below the return address and arguments.
-  else
+  if (HasFP) {
+    if (FrameIndex < 0)
+      Offset += 2; // Account for the BP pushed by the prologue.
+  } else {
     Offset += MF.getFrameInfo().getStackSize();
+  }
   Offset += MI.getOperand(FIOperandNum + 3).getImm();
 
   // X86 memory operands are base, scale, index, displacement, segment.

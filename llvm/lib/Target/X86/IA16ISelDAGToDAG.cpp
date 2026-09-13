@@ -50,6 +50,29 @@ static std::optional<X86::CondCode> getIA16CondCode(ISD::CondCode CC) {
 }
 
 class IA16DAGToDAGISel final : public SelectionDAGISel {
+  bool selectAddress(SDValue Ptr, const SDLoc &DL,
+                     SmallVectorImpl<SDValue> &Ops) {
+    SDValue Base;
+    SDValue Disp;
+    if (auto *FI = dyn_cast<FrameIndexSDNode>(Ptr)) {
+      Base = CurDAG->getTargetFrameIndex(FI->getIndex(), MVT::i16);
+      Disp = CurDAG->getSignedTargetConstant(0, DL, MVT::i32);
+    } else if (auto *GA = dyn_cast<GlobalAddressSDNode>(Ptr)) {
+      Base = CurDAG->getRegister(0, MVT::i16);
+      Disp = CurDAG->getTargetGlobalAddress(
+          GA->getGlobal(), DL, MVT::i16, GA->getOffset());
+    } else {
+      Base = Ptr;
+      Disp = CurDAG->getSignedTargetConstant(0, DL, MVT::i32);
+    }
+    Ops.push_back(Base);
+    Ops.push_back(CurDAG->getTargetConstant(1, DL, MVT::i8));
+    Ops.push_back(CurDAG->getRegister(0, MVT::i16));
+    Ops.push_back(Disp);
+    Ops.push_back(CurDAG->getRegister(0, MVT::i16));
+    return true;
+  }
+
 public:
   IA16DAGToDAGISel(IA16TargetMachine &TM, CodeGenOptLevel OptLevel)
       : SelectionDAGISel(TM, OptLevel) {}
@@ -186,16 +209,10 @@ public:
       if (Load->getMemoryVT() != MVT::i8 &&
           Load->getMemoryVT() != MVT::i16)
         break;
-      auto *FI = dyn_cast<FrameIndexSDNode>(Load->getBasePtr());
-      if (!FI)
+      SmallVector<SDValue, 6> Ops;
+      if (!selectAddress(Load->getBasePtr(), DL, Ops))
         break;
-      SDValue Base = CurDAG->getTargetFrameIndex(FI->getIndex(), MVT::i16);
-      SDValue Scale = CurDAG->getTargetConstant(1, DL, MVT::i8);
-      SDValue Index = CurDAG->getRegister(0, MVT::i16);
-      SDValue Disp = CurDAG->getSignedTargetConstant(0, DL, MVT::i32);
-      SDValue Segment = CurDAG->getRegister(0, MVT::i16);
-      SmallVector<SDValue, 6> Ops = {Base, Scale, Index,
-                                     Disp, Segment, Load->getChain()};
+      Ops.push_back(Load->getChain());
       unsigned Opc = Load->getMemoryVT() == MVT::i8 ? X86::MOV8rm
                                                     : X86::MOV16rm;
       MVT VT = Load->getMemoryVT() == MVT::i8 ? MVT::i8 : MVT::i16;
@@ -207,21 +224,11 @@ public:
       if (Store->getMemoryVT() != MVT::i8 &&
           Store->getMemoryVT() != MVT::i16)
         break;
-      auto *FI = dyn_cast<FrameIndexSDNode>(Store->getBasePtr());
-      if (!FI)
+      SmallVector<SDValue, 7> Ops;
+      if (!selectAddress(Store->getBasePtr(), DL, Ops))
         break;
-      SDValue Base = CurDAG->getTargetFrameIndex(FI->getIndex(), MVT::i16);
-      SDValue Scale = CurDAG->getTargetConstant(1, DL, MVT::i8);
-      SDValue Index = CurDAG->getRegister(0, MVT::i16);
-      SDValue Disp = CurDAG->getSignedTargetConstant(0, DL, MVT::i32);
-      SDValue Segment = CurDAG->getRegister(0, MVT::i16);
-      SmallVector<SDValue, 7> Ops = {Base,
-                                     Scale,
-                                     Index,
-                                     Disp,
-                                     Segment,
-                                     Store->getValue(),
-                                     Store->getChain()};
+      Ops.push_back(Store->getValue());
+      Ops.push_back(Store->getChain());
       unsigned Opc = Store->getMemoryVT() == MVT::i8 ? X86::MOV8mr
                                                      : X86::MOV16mr;
       CurDAG->SelectNodeTo(N, Opc, MVT::Other, Ops);

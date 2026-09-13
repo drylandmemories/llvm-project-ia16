@@ -7,14 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 def x86_ptr_rc : RegClassByHwMode<
-  [X86_32, X86_64, X86_64_X32],
-  [GR32, GR64, LOW32_ADDR_ACCESS]>;
+  [X86_32, X86_IA16, X86_64, X86_64_X32],
+  [GR32, IA16_ADDR16, GR64, LOW32_ADDR_ACCESS]>;
 
 // A version of ptr_rc which excludes SP, ESP, and RSP. This is used for
 // the index operand of an address, to conform to x86 encoding restrictions.
 def ptr_rc_nosp : RegClassByHwMode<
-  [X86_32, X86_64, X86_64_X32],
-  [GR32_NOSP, GR64_NOSP, GR32_NOSP]>;
+  [X86_32, X86_IA16, X86_64, X86_64_X32],
+  [GR32_NOSP, IA16_ADDR16, GR64_NOSP, GR32_NOSP]>;
 
 // *mem - Operand definitions for the funky X86 addressing mode operands.
 //

@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -triple ia16-unknown-none-elf -target-cpu i8086 -O1 -S \
 // RUN:   -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple ia16-unknown-none-elf -target-cpu i8086 -O1 \
+// RUN:   -emit-obj -o %t.o %s
+// RUN: llvm-readobj --file-headers --relocations %t.o | FileCheck %s \
+// RUN:   --check-prefix=RELOC
 
 int add(int a, int b) { return a + b; }
 extern int callee(int, int);
@@ -10,6 +14,11 @@ int branch_call(int a, int b) {
   return callee(b, 2);
 }
 unsigned char byte_inc(unsigned char value) { return value + 1; }
+int global_word;
+int load_global(void) { return global_word; }
+void store_global(int value) { global_word = value; }
+int load_pointer(const int *pointer) { return *pointer; }
+void store_pointer(int *pointer, int value) { *pointer = value; }
 
 // CHECK-LABEL: add:
 // CHECK:       pushw %bp
@@ -40,4 +49,29 @@ unsigned char byte_inc(unsigned char value) { return value + 1; }
 // CHECK:       movb 4(%bp),
 // CHECK:       addb
 // CHECK:       xorw
+// CHECK:       retw
+
+// CHECK-LABEL: load_global:
+// CHECK:       movw global_word,
+// CHECK:       retw
+
+// CHECK-LABEL: store_global:
+// CHECK:       movw {{.*}}, global_word
+// CHECK:       retw
+
+// CHECK-LABEL: load_pointer:
+// CHECK:       movw %bx, -2(%bp)
+// CHECK:       movw ({{%([bs]x|bp|[sd]i)}}),
+// CHECK:       movw -2(%bp), %bx
+// CHECK:       retw
+
+// RELOC:      Format: elf32-i386
+// RELOC:      Machine: EM_386
+// RELOC-COUNT-3: R_386_PC16
+// RELOC-COUNT-2: R_386_16 global_word
+
+// CHECK-LABEL: store_pointer:
+// CHECK:       movw %bx, -2(%bp)
+// CHECK:       movw {{.*}}, ({{%([bs]x|bp|[sd]i)}})
+// CHECK:       movw -2(%bp), %bx
 // CHECK:       retw
