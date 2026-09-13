@@ -112,6 +112,17 @@ def PUSH32rmm: I<0xFF, MRM6m, (outs), (ins i32mem:$src), "push{l}\t$src", []>,
 
 }
 
+// The IA-16 code generator models the architectural 16-bit stack pointer,
+// rather than the ESP super-register used by the i386 backend's -m16 mode.
+let Defs = [SP], Uses = [SP], hasSideEffects = 0, isCodeGenOnly = 1 in {
+let mayLoad = 1, SchedRW = [WriteLoad] in
+def IA16_POP16r : I<0x58, AddRegFrm, (outs GR16:$reg), (ins),
+                   "pop{w}\t$reg", []>, OpSize16;
+let mayStore = 1, SchedRW = [WriteStore] in
+def IA16_PUSH16r : I<0x50, AddRegFrm, (outs), (ins GR16:$reg),
+                    "push{w}\t$reg", []>, OpSize16;
+}
+
 let isPseudo = 1, mayLoad = 1, mayStore = 1,
     SchedRW = [WriteRMW], Defs = [ESP] in {
   let Uses = [ESP] in

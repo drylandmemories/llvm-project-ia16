@@ -184,18 +184,18 @@ def R31WH : X86Reg<"", -1>;
 
 // 16-bit registers
 let SubRegIndices = [sub_8bit, sub_8bit_hi], CoveredBySubRegs = 1 in {
-def AX : X86Reg<"ax", 0, [AL,AH]>;
-def DX : X86Reg<"dx", 2, [DL,DH]>;
-def CX : X86Reg<"cx", 1, [CL,CH]>;
-def BX : X86Reg<"bx", 3, [BL,BH]>;
+def AX : X86Reg<"ax", 0, [AL,AH]>, DwarfRegNum<[-2, 0, 0]>;
+def DX : X86Reg<"dx", 2, [DL,DH]>, DwarfRegNum<[-2, 2, 2]>;
+def CX : X86Reg<"cx", 1, [CL,CH]>, DwarfRegNum<[-2, 1, 1]>;
+def BX : X86Reg<"bx", 3, [BL,BH]>, DwarfRegNum<[-2, 3, 3]>;
 }
 let SubRegIndices = [sub_8bit, sub_8bit_hi_phony], CoveredBySubRegs = 1 in {
-def SI : X86Reg<"si", 6, [SIL,SIH]>;
-def DI : X86Reg<"di", 7, [DIL,DIH]>;
-def BP : X86Reg<"bp", 5, [BPL,BPH]>;
-def SP : X86Reg<"sp", 4, [SPL,SPH]>;
+def SI : X86Reg<"si", 6, [SIL,SIH]>, DwarfRegNum<[-2, 6, 6]>;
+def DI : X86Reg<"di", 7, [DIL,DIH]>, DwarfRegNum<[-2, 7, 7]>;
+def BP : X86Reg<"bp", 5, [BPL,BPH]>, DwarfRegNum<[-2, 4, 5]>;
+def SP : X86Reg<"sp", 4, [SPL,SPH]>, DwarfRegNum<[-2, 5, 4]>;
 }
-def IP : X86Reg<"ip", 0>;
+def IP : X86Reg<"ip", 0>, DwarfRegNum<[-2, 8, 8]>;
 
 // X86-64 only, requires REX.
 let SubRegIndices = [sub_8bit, sub_8bit_hi_phony], CoveredBySubRegs = 1 in {
@@ -645,6 +645,17 @@ def GR8_NOREX : RegisterClass<"X86", [i8], 8,
 // GR16_NOREX - GR16 registers which do not require a REX prefix.
 def GR16_NOREX : RegisterClass<"X86", [i16], 16,
                                (add AX, CX, DX, SI, DI, BX, BP, SP)>;
+
+// IA-16 has only the original 8086 general-purpose registers.  Keep these
+// classes separate from GR8/GR16 so the IA-16 allocator can never acquire a
+// register that requires a 32-bit register file or a REX/APX encoding.  SP is
+// deliberately absent from the allocatable class.
+def IA16_GR8 : RegisterClass<"X86", [i8], 8,
+                               (add AL, CL, DL, BL, AH, CH, DH, BH)>;
+def IA16_GR16 : RegisterClass<"X86", [i16], 16,
+                                (add AX, CX, DX, BX, SI, DI, BP)>;
+def IA16_ADDR16 : RegisterClass<"X86", [i16], 16,
+                                  (add BX, BP, SI, DI)>;
 // GR32_NOREX - GR32 registers which do not require a REX prefix.
 def GR32_NOREX : RegisterClass<"X86", [i32], 32,
                                (add EAX, ECX, EDX, ESI, EDI, EBX, EBP, ESP)>;

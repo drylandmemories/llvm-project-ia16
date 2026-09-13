@@ -24,7 +24,7 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1,
                     "ret{l}", []>, OpSize32, Requires<[Not64BitMode]>;
   def RET64  : I   <0xC3, RawFrm, (outs), (ins variable_ops),
                     "ret{q}", []>, OpSize32, Requires<[In64BitMode]>;
-  def RET16  : I   <0xC3, RawFrm, (outs), (ins),
+  def RET16  : I   <0xC3, RawFrm, (outs), (ins variable_ops),
                     "ret{w}", []>, OpSize16;
   def RETI32 : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt, variable_ops),
                     "ret{l}\t$amt", []>, OpSize32, Requires<[Not64BitMode]>;

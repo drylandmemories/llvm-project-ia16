@@ -53,6 +53,10 @@
 
 using namespace llvm;
 
+namespace llvm {
+void registerIA16TargetMachine();
+}
+
 static cl::opt<bool> EnableMachineCombinerPass("x86-machine-combiner",
                                cl::desc("Enable the machine combiner pass"),
                                cl::init(true), cl::Hidden);
@@ -64,6 +68,7 @@ static cl::opt<bool>
 
 extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   // Register the target.
+  registerIA16TargetMachine();
   RegisterTargetMachine<X86TargetMachine> X(getTheX86_32Target());
   RegisterTargetMachine<X86TargetMachine> Y(getTheX86_64Target());
 

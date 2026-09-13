@@ -453,16 +453,17 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
 
   // Initialize initial frame state.
   // Calculate amount of bytes used for return address storing
-  int stackGrowth = is64Bit ? -8 : -4;
+  bool IsIA16 = TheTriple.getArch() == Triple::ia16;
+  int stackGrowth = IsIA16 ? -2 : is64Bit ? -8 : -4;
 
   // Initial state of the frame pointer is esp+stackGrowth.
-  unsigned StackPtr = is64Bit ? X86::RSP : X86::ESP;
+  unsigned StackPtr = IsIA16 ? X86::SP : is64Bit ? X86::RSP : X86::ESP;
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(
       nullptr, MRI.getDwarfRegNum(StackPtr, true), -stackGrowth);
   MAI->addInitialFrameState(Inst);
 
   // Add return address to move list
-  unsigned InstPtr = is64Bit ? X86::RIP : X86::EIP;
+  unsigned InstPtr = IsIA16 ? X86::IP : is64Bit ? X86::RIP : X86::EIP;
   MCCFIInstruction Inst2 = MCCFIInstruction::createOffset(
       nullptr, MRI.getDwarfRegNum(InstPtr, true), stackGrowth);
   MAI->addInitialFrameState(Inst2);

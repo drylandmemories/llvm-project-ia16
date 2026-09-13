@@ -25,6 +25,14 @@ tablegen(LLVM X86GenPreLegalizeGICombiner.inc -gen-global-isel-combiner
 add_public_tablegen_target(X86CommonTableGen)
 
 set(sources
+  IA16AsmPrinter.cpp
+  IA16FrameLowering.cpp
+  IA16ISelDAGToDAG.cpp
+  IA16InstrInfo.cpp
+  IA16ISelLowering.cpp
+  IA16RegisterInfo.cpp
+  IA16Subtarget.cpp
+  IA16TargetMachine.cpp
   X86ArgumentStackSlotRebase.cpp
   X86AsmPrinter.cpp
   X86AvoidTrailingCall.cpp

@@ -53,6 +53,10 @@
 
 using namespace llvm;
 
+namespace llvm {
+void registerIA16AsmPrinter();
+}
+
 X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer), ID), FM(*this) {}
@@ -1116,6 +1120,7 @@ INITIALIZE_PASS(X86AsmPrinter, "x86-asm-printer", "X86 Assembly Printer", false,
 
 // Force static initialization.
 extern "C" LLVM_C_ABI void LLVMInitializeX86AsmPrinter() {
+  registerIA16AsmPrinter();
   RegisterAsmPrinter<X86AsmPrinter> X(getTheX86_32Target());
   RegisterAsmPrinter<X86AsmPrinter> Y(getTheX86_64Target());
 }

@@ -2373,6 +2373,7 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   case Triple::arc:
   case Triple::csky:
   case Triple::hexagon:
+  case Triple::ia16:
   case Triple::lanai:
   case Triple::m68k:
   case Triple::msp430:
