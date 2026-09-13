@@ -79,3 +79,11 @@ define i8 @byte_identity(i8 %value) {
 ; CHECK:       retw
   ret i8 %value
 }
+
+define i8 @freeze_byte(i8 %value) {
+; CHECK-LABEL: freeze_byte:
+; CHECK:       movb 4(%bp), %al
+; CHECK:       retw
+  %frozen = freeze i8 %value
+  ret i8 %frozen
+}

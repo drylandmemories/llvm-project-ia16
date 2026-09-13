@@ -153,6 +153,10 @@ public:
       ReplaceUses(SDValue(N, 0), N->getOperand(0));
       CurDAG->RemoveDeadNode(N);
       return;
+    case ISD::FREEZE:
+      CurDAG->SelectNodeTo(N, TargetOpcode::COPY, N->getValueType(0),
+                           N->getOperand(0));
+      return;
     case ISD::FrameIndex: {
       auto *FI = cast<FrameIndexSDNode>(N);
       SDValue Ops[] = {
