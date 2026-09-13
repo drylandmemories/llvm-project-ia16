@@ -125,9 +125,13 @@ correctness; segmented Clang C and explicit far behavior; hosted DOS COM/MZ;
 multiple segments plus 80286 protected mode; then huge pointers, full
 runtime/sysroot, optimization hardening, release suites, and packaging.
 
-## Serial opening task
+## Historical serial opening task
 
-The first successor is `IA-16 — Reproducible baseline acceptance`. Existing
+This section records the completed migration opening task, not current admission
+instructions. Fresh tasks follow Admission above and the reviewed next outcome
+in ACCEPTANCE, with authority preserved in their assignment and capsule.
+
+The first successor was `IA-16 — Reproducible baseline acceptance`. Existing
 compiler capabilities need repeatable acceptance because the historical
 25-test slice did not establish the full parser/relocation boundary and its
 runtime probes were not one reproducible candidate suite. Scope permits
@@ -142,5 +146,6 @@ source/tool/CPU identities; accounts for opcode coverage; maps every admitted
 requirement to evidence; and identifies one bounded next gap. An implementation
 defect is handed off as a separate task.
 
-Its capsule must not be initialized until this migration has passed independent
-review, CURRENT revision 3 is committed, and the shared ledger is reconciled.
+That historical capsule required independent migration review, committed CURRENT
+revision 3, and shared-ledger reconciliation before initialization. Preserve
+that evidence; do not recreate its capsule or revert current state to revision 3.
