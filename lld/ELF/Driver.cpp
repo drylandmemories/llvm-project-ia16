@@ -3148,6 +3148,22 @@ static void postParseObjectFile(ELFFileBase *file) {
   }
 }
 
+static void checkIA16AbiVersions(Ctx &ctx) {
+  const ELFFileBase *reference = nullptr;
+  for (const ELFFileBase *file : ctx.objectFiles) {
+    if (file->ia16AbiVersion.empty())
+      continue;
+    if (!reference) {
+      reference = file;
+      continue;
+    }
+    if (file->ia16AbiVersion != reference->ia16AbiVersion)
+      Err(ctx) << file << ": IA-16 ABI " << file->ia16AbiVersion
+               << " is incompatible with " << reference << " ("
+               << reference->ia16AbiVersion << ")";
+  }
+}
+
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
@@ -3343,6 +3359,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
       if (!oldFilenames.contains(newFile->getName()))
         Err(ctx) << "input file '" << newFile->getName() << "' added after LTO";
   }
+
+  checkIA16AbiVersions(ctx);
+  if (errCount(ctx))
+    return;
 
   // Handle --exclude-libs again because lto.tmp may reference additional
   // libcalls symbols defined in an excluded archive. This may override

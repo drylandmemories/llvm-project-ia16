@@ -1,6 +1,17 @@
 // RUN: %clang_cc1 -triple ia16-unknown-none-elf -ffreestanding -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple ia16-unknown-none-elf -ffreestanding -mcmodel=huge \
 // RUN:   -DIA16_HUGE -emit-llvm -o - %s | FileCheck %s --check-prefix=HUGE
+// RUN: %clang_cc1 -triple ia16-unknown-none-elf -ffreestanding -emit-obj \
+// RUN:   -o %t.o %s
+// RUN: llvm-readelf -n %t.o | FileCheck %s --check-prefix=NOTE
+
+// NOTE: Displaying notes found in: .note.ia16.abi
+// NOTE: Owner
+// NOTE-SAME: Data size
+// NOTE-SAME: Description
+// NOTE: IA16
+// NOTE-SAME: NT_VERSION (version)
+// NOTE: description data: 49 41 31 36 2d 41 42 49 3a 30 2e 32 00
 
 typedef int *near_pointer;
 typedef int __attribute__((address_space(1))) *far_pointer;

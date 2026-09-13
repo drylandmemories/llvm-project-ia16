@@ -16,10 +16,12 @@ Version identification
 ======================
 
 The compiler defines ``__IA16_ABI_VERSION__`` as ``0x000200`` for this ABI.
-Object producers add an ELF ``.note.ia16.abi`` note containing the NUL-ended
-ASCII string ``IA16-ABI:0.2``.  LLD diagnoses a link that combines different
-IA-16 ABI versions.  These producer and linker requirements become active
-when the IA-16 code generator and linker driver are enabled.
+Compiler-generated objects add an ELF ``.note.ia16.abi`` note with owner
+``IA16``, type ``1``, and the NUL-ended ASCII descriptor
+``IA16-ABI:0.2``.  LLD retains these notes and diagnoses a link that combines
+different recorded IA-16 ABI versions.  An object without this note, such as
+handwritten startup assembly, remains linkable and does not establish a
+version.
 
 Scalar data model
 =================

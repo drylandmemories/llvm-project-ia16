@@ -8,11 +8,13 @@
 
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "TargetInfo/X86TargetInfo.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -26,6 +28,27 @@ public:
       : AsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override { return "IA-16 Assembly Printer"; }
+
+  void emitStartOfAsmFile(Module &M) override {
+    MCSection *current = OutStreamer->getCurrentSectionOnly();
+    MCSection *note = OutContext.getELFSection(".note.ia16.abi", ELF::SHT_NOTE,
+                                               /*Flags=*/0);
+    OutStreamer->switchSection(note);
+
+    // Record the versioned IA-16 ABI implemented by this object. Keep the
+    // owner, type, and descriptor stable: LLD uses them to reject links
+    // between objects with incompatible IA-16 ABI revisions.
+    emitAlignment(Align(4));
+    OutStreamer->emitInt32(5);  // size of "IA16\0"
+    OutStreamer->emitInt32(13); // size of "IA16-ABI:0.2\0"
+    OutStreamer->emitInt32(1);  // IA-16 ABI version note
+    OutStreamer->emitBytes(StringRef("IA16", 5));
+    emitAlignment(Align(4));
+    OutStreamer->emitBytes(StringRef("IA16-ABI:0.2", 13));
+    emitAlignment(Align(4));
+
+    OutStreamer->switchSection(current);
+  }
 
   void emitInstruction(const MachineInstr *MI) override {
     MCInst Inst;

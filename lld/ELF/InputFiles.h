@@ -239,6 +239,9 @@ protected:
 public:
   // Name of source file obtained from STT_FILE, if present.
   StringRef sourceFile;
+  // NUL-terminated descriptor from a recognized .note.ia16.abi record,
+  // excluding the trailing NUL. Empty when this object records no IA-16 ABI.
+  StringRef ia16AbiVersion;
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
   std::optional<AArch64PauthAbiCoreInfo> aarch64PauthAbiCoreInfo;
