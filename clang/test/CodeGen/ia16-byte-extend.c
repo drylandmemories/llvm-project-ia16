@@ -18,6 +18,18 @@ int widen_signed_byte(signed char value) { return value; }
 
 int widen_unsigned_byte(unsigned char value) { return value; }
 
+int select_eq_byte(unsigned char value) {
+  return value != 0 ? 32767 : -32768;
+}
+
+int select_signed_byte(signed char value) {
+  return value < 0 ? 1234 : -1234;
+}
+
+int select_unsigned_byte(unsigned char value) {
+  return value < 7 ? 1234 : -1234;
+}
+
 // A signed byte load must preserve its sign before entering a 16-bit ABI slot.
 // CHECK-LABEL: call_signed_byte:
 // CHECK:       movb 4(%bp),
@@ -43,4 +55,25 @@ int widen_unsigned_byte(unsigned char value) { return value; }
 // CHECK-LABEL: widen_unsigned_byte:
 // CHECK:       movb 4(%bp),
 // CHECK-NOT:   movw $128,
+// CHECK:       retw
+
+// Byte comparisons feeding a 16-bit select are widened with the signedness
+// required by the condition before the target's word comparison.
+// CHECK-LABEL: select_eq_byte:
+// CHECK:       cmpw
+// CHECK:       je
+// CHECK:       retw
+
+// CHECK-LABEL: select_signed_byte:
+// CHECK:       movw $128,
+// CHECK:       xorw
+// CHECK:       subw
+// CHECK:       cmpw
+// CHECK:       jl
+// CHECK:       retw
+
+// CHECK-LABEL: select_unsigned_byte:
+// CHECK-NOT:   movw $128,
+// CHECK:       cmpw
+// CHECK:       jb
 // CHECK:       retw

@@ -22,6 +22,24 @@ int less_double(double left, double right) { return left < right; }
 double extend_float(float value) { return value; }
 float truncate_double(double value) { return value; }
 
+float signed_int_to_float(long value) { return value; }
+float unsigned_int_to_float(unsigned long value) { return value; }
+float signed_long_long_to_float(long long value) { return value; }
+float unsigned_long_long_to_float(unsigned long long value) { return value; }
+double signed_int_to_double(long value) { return value; }
+double unsigned_int_to_double(unsigned long value) { return value; }
+double signed_long_long_to_double(long long value) { return value; }
+double unsigned_long_long_to_double(unsigned long long value) { return value; }
+
+long float_to_signed_int(float value) { return value; }
+unsigned long float_to_unsigned_int(float value) { return value; }
+long long float_to_signed_long_long(float value) { return value; }
+unsigned long long float_to_unsigned_long_long(float value) { return value; }
+long double_to_signed_int(double value) { return value; }
+unsigned long double_to_unsigned_int(double value) { return value; }
+long long double_to_signed_long_long(double value) { return value; }
+unsigned long long double_to_unsigned_long_long(double value) { return value; }
+
 // CHECK-LABEL: add_float:
 // CHECK:       callw __addsf3
 // CHECK-LABEL: subtract_float:
@@ -48,3 +66,37 @@ float truncate_double(double value) { return value; }
 // CHECK:       callw __extendsfdf2
 // CHECK-LABEL: truncate_double:
 // CHECK:       callw __truncdfsf2
+
+// CHECK-LABEL: signed_int_to_float:
+// CHECK:       callw __floatsisf
+// CHECK-LABEL: unsigned_int_to_float:
+// CHECK:       callw __floatunsisf
+// CHECK-LABEL: signed_long_long_to_float:
+// CHECK:       callw __floatdisf
+// CHECK-LABEL: unsigned_long_long_to_float:
+// CHECK:       callw __floatundisf
+// CHECK-LABEL: signed_int_to_double:
+// CHECK:       callw __floatsidf
+// CHECK-LABEL: unsigned_int_to_double:
+// CHECK:       callw __floatunsidf
+// CHECK-LABEL: signed_long_long_to_double:
+// CHECK:       callw __floatdidf
+// CHECK-LABEL: unsigned_long_long_to_double:
+// CHECK:       callw __floatundidf
+
+// CHECK-LABEL: float_to_signed_int:
+// CHECK:       callw __fixsfsi
+// CHECK-LABEL: float_to_unsigned_int:
+// CHECK:       callw __fixunssfsi
+// CHECK-LABEL: float_to_signed_long_long:
+// CHECK:       callw __fixsfdi
+// CHECK-LABEL: float_to_unsigned_long_long:
+// CHECK:       callw __fixunssfdi
+// CHECK-LABEL: double_to_signed_int:
+// CHECK:       callw __fixdfsi
+// CHECK-LABEL: double_to_unsigned_int:
+// CHECK:       callw __fixunsdfsi
+// CHECK-LABEL: double_to_signed_long_long:
+// CHECK:       callw __fixdfdi
+// CHECK-LABEL: double_to_unsigned_long_long:
+// CHECK:       callw __fixunsdfdi

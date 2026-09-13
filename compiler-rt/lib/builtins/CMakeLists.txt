@@ -898,6 +898,22 @@ set(ia16_SOURCES
   divsf3.c
   divsi3.c
   extendsfdf2.c
+  fixdfdi.c
+  fixdfsi.c
+  fixsfdi.c
+  fixsfsi.c
+  fixunsdfdi.c
+  fixunsdfsi.c
+  fixunssfdi.c
+  fixunssfsi.c
+  floatdidf.c
+  floatdisf.c
+  floatsidf.c
+  floatsisf.c
+  floatundidf.c
+  floatundisf.c
+  floatunsidf.c
+  floatunsisf.c
   fp_mode.c
   lshrdi3.c
   moddi3.c

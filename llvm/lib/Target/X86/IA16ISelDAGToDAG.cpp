@@ -237,8 +237,7 @@ public:
     }
     case ISD::SELECT_CC: {
       if (N->getValueType(0) != MVT::i16 ||
-          N->getOperand(0).getValueType() != MVT::i16 ||
-          N->getOperand(1).getValueType() != MVT::i16 ||
+          N->getOperand(0).getValueType() != N->getOperand(1).getValueType() ||
           N->getOperand(2).getValueType() != MVT::i16 ||
           N->getOperand(3).getValueType() != MVT::i16)
         break;
@@ -246,8 +245,18 @@ public:
       std::optional<X86::CondCode> CC = getIA16CondCode(CCNode->get());
       if (!CC)
         break;
-      SDValue Ops[] = {N->getOperand(0), N->getOperand(1), N->getOperand(2),
-                       N->getOperand(3),
+      SDValue LHS = N->getOperand(0);
+      SDValue RHS = N->getOperand(1);
+      if (LHS.getValueType() == MVT::i8) {
+        bool IsSigned =
+            CCNode->get() == ISD::SETLT || CCNode->get() == ISD::SETLE ||
+            CCNode->get() == ISD::SETGT || CCNode->get() == ISD::SETGE;
+        LHS = IsSigned ? signExtendByte(LHS, DL) : zeroExtendByte(LHS, DL);
+        RHS = IsSigned ? signExtendByte(RHS, DL) : zeroExtendByte(RHS, DL);
+      } else if (LHS.getValueType() != MVT::i16) {
+        break;
+      }
+      SDValue Ops[] = {LHS, RHS, N->getOperand(2), N->getOperand(3),
                        CurDAG->getTargetConstant(*CC, DL, MVT::i8)};
       CurDAG->SelectNodeTo(N, X86::IA16_SELECTCC16, MVT::i16, Ops);
       return;
