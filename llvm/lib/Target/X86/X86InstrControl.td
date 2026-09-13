@@ -274,6 +274,15 @@ let isCall = 1 in
     }
   }
 
+// IA-16 near calls use the architectural SP.  The i386 backend's CALLpcrel16
+// intentionally retains ESP semantics for its -m16 mode, so code generation
+// for the distinct IA-16 target uses this codegen-only twin.
+let isCall = 1, Uses = [SP], isCodeGenOnly = 1, hasSideEffects = 0,
+    SchedRW = [WriteJump] in
+def IA16_CALLpcrel16 : Ii16PCRel<0xE8, RawFrm, (outs),
+                       (ins i16imm_brtarget:$dst), "call{w}\t$dst", []>,
+                       OpSize16, Requires<[Not64BitMode]>;
+
 
 // Tail call stuff.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,

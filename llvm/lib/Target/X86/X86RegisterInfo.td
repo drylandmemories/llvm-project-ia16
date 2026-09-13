@@ -652,6 +652,8 @@ def GR16_NOREX : RegisterClass<"X86", [i16], 16,
 // deliberately absent from the allocatable class.
 def IA16_GR8 : RegisterClass<"X86", [i8], 8,
                                (add AL, CL, DL, BL, AH, CH, DH, BH)>;
+def IA16_GR16_ABCD : RegisterClass<"X86", [i16], 16,
+                                      (add AX, CX, DX, BX)>;
 def IA16_GR16 : RegisterClass<"X86", [i16], 16,
                                 (add AX, CX, DX, BX, SI, DI, BP)>;
 def IA16_ADDR16 : RegisterClass<"X86", [i16], 16,

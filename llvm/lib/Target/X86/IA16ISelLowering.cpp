@@ -9,6 +9,7 @@
 #include "IA16ISelLowering.h"
 #include "IA16Subtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -35,6 +36,7 @@ IA16TargetLowering::IA16TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ROTR, MVT::i16, Expand);
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
+  setOperationAction(ISD::BR_CC, MVT::i16, Legal);
   setOperationAction(ISD::SELECT, MVT::i8, Expand);
   setOperationAction(ISD::SELECT, MVT::i16, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i16, Expand);
@@ -81,11 +83,9 @@ SDValue IA16TargetLowering::LowerFormalArguments(
 
     int FI = MFI.CreateFixedObject(2, Offset, true);
     SDValue Addr = DAG.getFrameIndex(FI, MVT::i16);
-    SDValue Value = DAG.getLoad(MVT::i16, DL, Chain, Addr,
+    SDValue Value = DAG.getLoad(VT, DL, Chain, Addr,
                                 MachinePointerInfo::getFixedStack(
                                     DAG.getMachineFunction(), FI));
-    if (VT == MVT::i8)
-      Value = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, Value);
     InVals.push_back(Value);
     Offset += 2;
   }
@@ -93,8 +93,65 @@ SDValue IA16TargetLowering::LowerFormalArguments(
 }
 
 SDValue IA16TargetLowering::LowerCall(
-    CallLoweringInfo &, SmallVectorImpl<SDValue> &) const {
-  report_fatal_error("IA-16 call lowering is not implemented");
+    CallLoweringInfo &CLI, SmallVectorImpl<SDValue> &InVals) const {
+  if (CLI.CallConv != CallingConv::C || CLI.IsVarArg)
+    report_fatal_error("unsupported IA-16 call convention");
+  CLI.IsTailCall = false;
+
+  SelectionDAG &DAG = CLI.DAG;
+  SDLoc &DL = CLI.DL;
+  SDValue Chain = CLI.Chain;
+  unsigned StackBytes = 0;
+
+  // cdecl arguments are pushed right-to-left in complete 16-bit words.
+  for (int I = static_cast<int>(CLI.Outs.size()) - 1; I >= 0; --I) {
+    EVT VT = CLI.Outs[I].VT;
+    if (VT != MVT::i16)
+      report_fatal_error("unsupported IA-16 call argument type");
+    SDValue Ops[] = {CLI.OutVals[I], Chain};
+    Chain = SDValue(
+        DAG.getMachineNode(X86::IA16_PUSH16r, DL, MVT::Other, Ops), 0);
+    StackBytes += 2;
+  }
+
+  SDValue Callee = CLI.Callee;
+  if (auto *GA = dyn_cast<GlobalAddressSDNode>(Callee))
+    Callee = DAG.getTargetGlobalAddress(GA->getGlobal(), DL, MVT::i16,
+                                        GA->getOffset());
+  else if (auto *ES = dyn_cast<ExternalSymbolSDNode>(Callee))
+    Callee = DAG.getTargetExternalSymbol(ES->getSymbol(), MVT::i16);
+  else
+    report_fatal_error("indirect IA-16 calls are not implemented");
+
+  const uint32_t *Mask =
+      DAG.getMachineFunction().getSubtarget().getRegisterInfo()->
+          getCallPreservedMask(DAG.getMachineFunction(), CLI.CallConv);
+  SDValue CallOps[] = {Callee, DAG.getRegisterMask(Mask), Chain};
+  SDVTList CallVTs = DAG.getVTList(MVT::Other, MVT::Glue);
+  SDNode *Call =
+      DAG.getMachineNode(X86::IA16_CALLpcrel16, DL, CallVTs, CallOps);
+  Chain = SDValue(Call, 0);
+  SDValue Glue(Call, 1);
+
+  for (const ISD::InputArg &In : CLI.Ins) {
+    if (In.VT != MVT::i16)
+      report_fatal_error("unsupported IA-16 call result type");
+    SDValue Result =
+        DAG.getCopyFromReg(Chain, DL, X86::AX, MVT::i16, Glue);
+    InVals.push_back(Result);
+    Chain = Result.getValue(1);
+    Glue = Result.getValue(2);
+  }
+
+  if (StackBytes) {
+    SDValue StackPointer = DAG.getCopyFromReg(Chain, DL, X86::SP, MVT::i16);
+    SDValue Amount = DAG.getTargetConstant(StackBytes, DL, MVT::i16);
+    SDValue Adjusted = SDValue(
+        DAG.getMachineNode(X86::ADD16ri, DL, MVT::i16, StackPointer, Amount),
+        0);
+    Chain = DAG.getCopyToReg(StackPointer.getValue(1), DL, X86::SP, Adjusted);
+  }
+  return Chain;
 }
 
 bool IA16TargetLowering::CanLowerReturn(

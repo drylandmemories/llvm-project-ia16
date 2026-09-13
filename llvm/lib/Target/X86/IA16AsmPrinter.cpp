@@ -11,6 +11,8 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -41,6 +43,28 @@ public:
       }
       if (MO.isImm()) {
         Inst.addOperand(MCOperand::createImm(MO.getImm()));
+        continue;
+      }
+      if (MO.isGlobal()) {
+        const MCExpr *Expr = MCSymbolRefExpr::create(getSymbol(MO.getGlobal()),
+                                                     OutContext);
+        if (MO.getOffset())
+          Expr = MCBinaryExpr::createAdd(
+              Expr, MCConstantExpr::create(MO.getOffset(), OutContext),
+              OutContext);
+        Inst.addOperand(MCOperand::createExpr(Expr));
+        continue;
+      }
+      if (MO.isSymbol()) {
+        const MCExpr *Expr = MCSymbolRefExpr::create(
+            OutContext.getOrCreateSymbol(MO.getSymbolName()), OutContext);
+        Inst.addOperand(MCOperand::createExpr(Expr));
+        continue;
+      }
+      if (MO.isMBB()) {
+        const MCExpr *Expr =
+            MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), OutContext);
+        Inst.addOperand(MCOperand::createExpr(Expr));
         continue;
       }
       report_fatal_error("unsupported IA-16 assembly operand");

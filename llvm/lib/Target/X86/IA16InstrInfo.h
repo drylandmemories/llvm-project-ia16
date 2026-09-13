@@ -24,10 +24,23 @@ public:
 
   const IA16RegisterInfo &getRegisterInfo() const { return RI; }
 
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
+
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
+
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
+      bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
+      Register VReg, MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const
+      override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 };
 
 } // end namespace llvm

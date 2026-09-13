@@ -23,14 +23,13 @@ bool IA16FrameLowering::hasFPImpl(const MachineFunction &MF) const {
 
 void IA16FrameLowering::emitPrologue(MachineFunction &MF,
                                      MachineBasicBlock &MBB) const {
-  if (!hasFP(MF))
-    return;
-
   const auto &TII = *MF.getSubtarget<IA16Subtarget>().getInstrInfo();
   MachineBasicBlock::iterator I = MBB.begin();
   DebugLoc DL = I == MBB.end() ? DebugLoc() : I->getDebugLoc();
-  BuildMI(MBB, I, DL, TII.get(X86::IA16_PUSH16r)).addReg(X86::BP);
-  BuildMI(MBB, I, DL, TII.get(X86::MOV16rr), X86::BP).addReg(X86::SP);
+  if (hasFP(MF)) {
+    BuildMI(MBB, I, DL, TII.get(X86::IA16_PUSH16r)).addReg(X86::BP);
+    BuildMI(MBB, I, DL, TII.get(X86::MOV16rr), X86::BP).addReg(X86::SP);
+  }
   uint64_t StackSize = MF.getFrameInfo().getStackSize();
   if (StackSize)
     BuildMI(MBB, I, DL, TII.get(X86::SUB16ri), X86::SP)
@@ -40,15 +39,19 @@ void IA16FrameLowering::emitPrologue(MachineFunction &MF,
 
 void IA16FrameLowering::emitEpilogue(MachineFunction &MF,
                                      MachineBasicBlock &MBB) const {
-  if (!hasFP(MF))
-    return;
-
   const auto &TII = *MF.getSubtarget<IA16Subtarget>().getInstrInfo();
   MachineBasicBlock::iterator I = MBB.getFirstTerminator();
   DebugLoc DL = I == MBB.end() ? DebugLoc() : I->getDebugLoc();
-  if (MF.getFrameInfo().getStackSize())
-    BuildMI(MBB, I, DL, TII.get(X86::MOV16rr), X86::SP).addReg(X86::BP);
-  BuildMI(MBB, I, DL, TII.get(X86::IA16_POP16r), X86::BP);
+  uint64_t StackSize = MF.getFrameInfo().getStackSize();
+  if (hasFP(MF)) {
+    if (StackSize)
+      BuildMI(MBB, I, DL, TII.get(X86::MOV16rr), X86::SP).addReg(X86::BP);
+    BuildMI(MBB, I, DL, TII.get(X86::IA16_POP16r), X86::BP);
+  } else if (StackSize) {
+    BuildMI(MBB, I, DL, TII.get(X86::ADD16ri), X86::SP)
+        .addReg(X86::SP)
+        .addImm(StackSize);
+  }
 }
 
 MachineBasicBlock::iterator IA16FrameLowering::eliminateCallFramePseudoInstr(

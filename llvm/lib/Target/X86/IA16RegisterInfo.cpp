@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <mutex>
 #include <vector>
 
 using namespace llvm;
@@ -29,10 +30,16 @@ IA16RegisterInfo::getCalleeSavedRegs(const MachineFunction *) const {
 
 const uint32_t *IA16RegisterInfo::getCallPreservedMask(
     const MachineFunction &, CallingConv::ID) const {
-  static const std::vector<uint32_t> Mask(
+  static std::vector<uint32_t> Mask(
       MachineOperand::getRegMaskSize(X86::NUM_TARGET_REGS), 0);
-  // Calls are not selected until the generated IA-16 call-preserved mask is
-  // added.  Returning an empty mask is safe (although pessimistic) meanwhile.
+  static std::once_flag Once;
+  std::call_once(Once, [&] {
+    for (MCPhysReg Reg :
+         {X86::BX, X86::SI, X86::DI, X86::BP, X86::SP, X86::SS}) {
+      for (MCRegAliasIterator I(Reg, this, true); I.isValid(); ++I)
+        Mask[*I / 32] |= 1u << (*I % 32);
+    }
+  });
   return Mask.data();
 }
 
