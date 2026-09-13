@@ -6,5 +6,6 @@
 # RUN:   | FileCheck %s --check-prefix=FRESH
 
 # CHECK: IA16-DOS-NAMES-8.3: PASS
+# CHECK: IA16-FAIL-CLOSED-SELF-TEST: PASS
 # CHECK: IA16-BASELINE-SELF-TEST: PASS
 # FRESH: error: output directory already exists:

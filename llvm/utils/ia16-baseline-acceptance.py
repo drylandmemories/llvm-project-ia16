@@ -32,6 +32,19 @@ CPUS = {
 }
 CPU_NAME_BY_RANK = {0: "i8086", 1: "i80186", 2: "i80286", 3: "post-i80286"}
 DOS_NAME_83 = re.compile(r"^[A-Z0-9_]{1,8}(?:\.[A-Z0-9_]{1,3})?$")
+REQUIRED_TEST_PATHS = {
+    "lld/test/ELF/ia16-segelf-relocs.s",
+    "llvm/test/Acceptance/IA16/baseline-harness.test",
+}
+REQUIRED_TARGET_PARSER_TESTS = (
+    "IA16TargetParserTest.CPUParsingAndAliases",
+    "IA16TargetParserTest.GenerationFeatures",
+    "IA16TargetParserTest.ValidCPUList",
+    "TripleTest.ParsedIDs",
+    "TripleTest.BitWidthChecks",
+    "TripleTest.FileFormat",
+    "DataLayoutTest.IA16SegmentedPointers",
+)
 
 # These opcode bytes are the generation boundaries relevant to code emitted by
 # this fixture.  Every decoded instruction is recorded.  Prefixes and the 0x0f
@@ -477,6 +490,23 @@ def sections_from_readobj(output: str) -> list[dict[str, Any]]:
     return result
 
 
+def select_executable_section(sections: list[dict[str, Any]]) -> dict[str, Any]:
+    executable = [
+        section
+        for section in sections
+        if "SHF_ALLOC" in section["flags"]
+        and "SHF_EXECINSTR" in section["flags"]
+        and section["size"] != 0
+    ]
+    if len(executable) != 1 or executable[0]["name"] != ".text":
+        names = [section["name"] for section in executable]
+        raise AcceptanceError(
+            "linked probe must contain exactly one executable .text section; "
+            f"found {names}"
+        )
+    return executable[0]
+
+
 def account_load_image(
     elf: pathlib.Path, com: pathlib.Path, sections: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
@@ -566,6 +596,39 @@ def self_test() -> None:
         pass
     else:
         raise AssertionError("unaccounted executable bytes were not rejected")
+    select_executable_section(
+        [{"flags": ["SHF_ALLOC", "SHF_EXECINSTR"], "name": ".text", "size": 1}]
+    )
+    try:
+        select_executable_section(
+            [
+                {
+                    "flags": ["SHF_ALLOC", "SHF_EXECINSTR"],
+                    "name": ".text",
+                    "size": 1,
+                },
+                {
+                    "flags": ["SHF_ALLOC", "SHF_EXECINSTR"],
+                    "name": ".init",
+                    "size": 1,
+                },
+            ]
+        )
+    except AcceptanceError:
+        pass
+    else:
+        raise AssertionError("additional executable sections were not rejected")
+    observed = validate_target_parser_output(
+        "\n".join(f"[ RUN      ] {name}" for name in REQUIRED_TARGET_PARSER_TESTS)
+    )
+    assert observed == list(REQUIRED_TARGET_PARSER_TESTS)
+    try:
+        validate_target_parser_output("[ RUN      ] TripleTest.ParsedIDs")
+    except AcceptanceError:
+        pass
+    else:
+        raise AssertionError("a shrunken TargetParser selection was not rejected")
+    print("IA16-FAIL-CLOSED-SELF-TEST: PASS")
     print("IA16-BASELINE-SELF-TEST: PASS")
 
 
@@ -582,7 +645,26 @@ def discover_test_paths(repo: pathlib.Path) -> dict[str, list[pathlib.Path]]:
     for name, paths in groups.items():
         if not paths or any(not path.exists() for path in paths):
             raise AcceptanceError(f"required {name} IA-16 tests are missing")
+    selected = {
+        str(path.relative_to(repo)) for paths in groups.values() for path in paths
+    }
+    missing = REQUIRED_TEST_PATHS - selected
+    if missing:
+        raise AcceptanceError(
+            "required exact IA-16 tests are missing: " + ", ".join(sorted(missing))
+        )
     return groups
+
+
+def validate_target_parser_output(output: str) -> list[str]:
+    observed = re.findall(r"^\[ RUN\s+\] (\S+)$", output, flags=re.MULTILINE)
+    expected = list(REQUIRED_TARGET_PARSER_TESTS)
+    if observed != expected:
+        raise AcceptanceError(
+            "TargetParser test selection changed; "
+            f"expected {expected}, observed {observed}"
+        )
+    return observed
 
 
 def tool_identity(
@@ -729,18 +811,35 @@ def run_acceptance(args: argparse.Namespace) -> int:
             "tests-target-parser",
             [
                 build / "unittests/TargetParser/TargetParserTests",
-                "--gtest_filter="
-                "IA16TargetParserTest.*:"
-                "TripleTest.ParsedIDs:"
-                "TripleTest.BitWidthChecks:"
-                "TripleTest.FileFormat:"
-                "DataLayoutTest.IA16SegmentedPointers",
+                "--gtest_filter=" + ":".join(REQUIRED_TARGET_PARSER_TESTS),
             ],
             cwd=repo,
         )
-        test_statuses.append(target_parser.returncode == 0)
+        try:
+            observed_target_parser_tests = validate_target_parser_output(
+                target_parser.stdout or ""
+            )
+            target_parser_selection_ok = True
+            target_parser_selection_error = None
+        except AcceptanceError as error:
+            observed_target_parser_tests = []
+            target_parser_selection_ok = False
+            target_parser_selection_error = str(error)
+        target_parser_ok = (
+            target_parser.returncode == 0 and target_parser_selection_ok
+        )
+        test_statuses.append(target_parser_ok)
         test_results["target-parser"] = (
-            "pass" if target_parser.returncode == 0 else "fail"
+            "pass" if target_parser_ok else "fail"
+        )
+        write_json(
+            output / "target-parser-selection.json",
+            {
+                "error": target_parser_selection_error,
+                "expected": list(REQUIRED_TARGET_PARSER_TESTS),
+                "observed": observed_target_parser_tests,
+                "status": "pass" if target_parser_ok else "fail",
+            },
         )
         write_json(output / "test-selection.json", test_manifest)
         result["evidence_layers"]["test"] = {
@@ -748,7 +847,8 @@ def run_acceptance(args: argparse.Namespace) -> int:
             "checks": test_results,
             "evidence": [
                 item["log"] for item in recorder.commands if item["name"].startswith("tests-")
-            ] + ["test-selection.json"],
+            ]
+            + ["test-selection.json", "target-parser-selection.json"],
             "explicit_omissions_closed": [
                 "lld/test/ELF/ia16-segelf-relocs.s",
                 "llvm/unittests/TargetParser/IA16TargetParserTest.cpp",
@@ -868,10 +968,7 @@ def run_acceptance(args: argparse.Namespace) -> int:
                 )
                 try:
                     sections = sections_from_readobj(readobj.stdout or "")
-                    text_sections = [item for item in sections if item["name"] == ".text"]
-                    if len(text_sections) != 1:
-                        raise AcceptanceError("linked probe does not contain exactly one .text")
-                    text_section = text_sections[0]
+                    text_section = select_executable_section(sections)
                     instructions = parse_disassembly(
                         disassembly.stdout or "",
                         text_address=text_section["address"],
