@@ -3164,6 +3164,26 @@ static void checkIA16AbiVersions(Ctx &ctx) {
   }
 }
 
+static void checkIA16Modes(Ctx &ctx) {
+  const ELFFileBase *reference = nullptr;
+  ctx.ia16OutputProtectedMode.reset();
+  for (const ELFFileBase *file : ctx.objectFiles) {
+    if (!file->ia16ProtectedMode)
+      continue;
+    if (!reference) {
+      reference = file;
+      ctx.ia16OutputProtectedMode = file->ia16ProtectedMode;
+      continue;
+    }
+    if (file->ia16ProtectedMode != reference->ia16ProtectedMode)
+      Err(ctx) << file << ": IA-16 "
+               << (*file->ia16ProtectedMode ? "protected" : "real")
+               << " mode is incompatible with " << reference << " ("
+               << (*reference->ia16ProtectedMode ? "protected" : "real")
+               << " mode)";
+  }
+}
+
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
@@ -3361,6 +3381,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   }
 
   checkIA16AbiVersions(ctx);
+  checkIA16Modes(ctx);
   if (errCount(ctx))
     return;
 

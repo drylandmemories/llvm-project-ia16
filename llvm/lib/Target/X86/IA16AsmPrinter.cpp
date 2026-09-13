@@ -11,6 +11,8 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -46,6 +48,34 @@ public:
     emitAlignment(Align(4));
     OutStreamer->emitBytes(StringRef("IA16-ABI:0.2", 13));
     emitAlignment(Align(4));
+
+    // Mode is a separate, additive note so objects remain ABI v0.2 and tools
+    // that do not know the note can safely ignore it. Updated linkers use the
+    // explicit mode to prevent real-mode SEGELF calculations in protected
+    // output; an object without this note does not establish a mode.
+    const auto *ProtectedMode = mdconst::extract_or_null<ConstantInt>(
+        M.getModuleFlag("ia16-protected-mode"));
+    if (ProtectedMode) {
+      MCSection *mode = OutContext.getELFSection(".note.ia16.mode",
+                                                 ELF::SHT_NOTE, /*Flags=*/0);
+      OutStreamer->switchSection(mode);
+      emitAlignment(Align(4));
+      OutStreamer->emitInt32(5); // size of "IA16\0"
+      if (ProtectedMode->isZero()) {
+        OutStreamer->emitInt32(15); // size of "IA16-MODE:real\0"
+        OutStreamer->emitInt32(2);  // IA-16 mode note
+        OutStreamer->emitBytes(StringRef("IA16", 5));
+        emitAlignment(Align(4));
+        OutStreamer->emitBytes(StringRef("IA16-MODE:real", 15));
+      } else {
+        OutStreamer->emitInt32(20); // size of "IA16-MODE:protected\0"
+        OutStreamer->emitInt32(2);  // IA-16 mode note
+        OutStreamer->emitBytes(StringRef("IA16", 5));
+        emitAlignment(Align(4));
+        OutStreamer->emitBytes(StringRef("IA16-MODE:protected", 20));
+      }
+      emitAlignment(Align(4));
+    }
 
     OutStreamer->switchSection(current);
   }

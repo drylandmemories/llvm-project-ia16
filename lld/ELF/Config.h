@@ -678,6 +678,8 @@ struct Ctx : CommonLinkerContext {
   SmallVector<BinaryFile *, 0> binaryFiles;
   SmallVector<BitcodeFile *, 0> bitcodeFiles;
   SmallVector<BitcodeFile *, 0> lazyBitcodeFiles;
+  // The explicit IA-16 output mode after all object mode notes agree.
+  std::optional<bool> ia16OutputProtectedMode;
   SmallVector<InputSectionBase *, 0> inputSections;
   SmallVector<EhInputSection *, 0> ehInputSections;
 

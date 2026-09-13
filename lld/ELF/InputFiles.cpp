@@ -1124,6 +1124,51 @@ static void readIA16AbiNote(Ctx &ctx, const InputSection &sec,
 }
 
 template <class ELFT>
+static void readIA16ModeNote(Ctx &ctx, const InputSection &sec,
+                             ObjFile<ELFT> &f) {
+  using Elf_Nhdr = typename ELFT::Nhdr;
+  using Elf_Note = typename ELFT::Note;
+
+  ArrayRef<uint8_t> data = sec.content();
+  auto err = [&](const uint8_t *place) -> ELFSyncStream {
+    auto diag = Err(ctx);
+    diag << sec.file << ":(" << sec.name << "+0x"
+         << Twine::utohexstr(place - sec.content().data()) << "): ";
+    return diag;
+  };
+
+  while (!data.empty()) {
+    auto *nhdr = reinterpret_cast<const Elf_Nhdr *>(data.data());
+    if (data.size() < sizeof(Elf_Nhdr) ||
+        data.size() < nhdr->getSize(sec.addralign))
+      return void(err(data.data()) << "data is too short");
+
+    Elf_Note note(*nhdr);
+    if (nhdr->n_type == 2 && note.getName() == "IA16") {
+      ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
+      if (desc.empty() || desc.back() != 0)
+        return void(err(data.data()) << "descriptor is not NUL-terminated");
+
+      StringRef mode(reinterpret_cast<const char *>(desc.data()),
+                     desc.size() - 1);
+      std::optional<bool> protectedMode;
+      if (mode == "IA16-MODE:real")
+        protectedMode = false;
+      else if (mode == "IA16-MODE:protected")
+        protectedMode = true;
+      else
+        return void(err(data.data()) << "invalid IA-16 mode descriptor");
+
+      if (f.ia16ProtectedMode && f.ia16ProtectedMode != protectedMode)
+        return void(err(data.data()) << "conflicting IA-16 mode descriptors");
+      f.ia16ProtectedMode = protectedMode;
+    }
+
+    data = data.slice(nhdr->getSize(sec.addralign));
+  }
+}
+
+template <class ELFT>
 InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx, uint32_t info) {
   if (info < this->sections.size()) {
     InputSectionBase *target = this->sections[info];
@@ -1152,6 +1197,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
   if (name.starts_with(".n")) {
     if (name == ".note.ia16.abi" && ctx.arg.emachine == EM_386)
       readIA16AbiNote<ELFT>(ctx, InputSection(*this, sec, name), *this);
+    if (name == ".note.ia16.mode" && ctx.arg.emachine == EM_386)
+      readIA16ModeNote<ELFT>(ctx, InputSection(*this, sec, name), *this);
 
     // The GNU linker uses .note.GNU-stack section as a marker indicating
     // that the code in the object file does not expect that the stack is

@@ -242,6 +242,10 @@ public:
   // NUL-terminated descriptor from a recognized .note.ia16.abi record,
   // excluding the trailing NUL. Empty when this object records no IA-16 ABI.
   StringRef ia16AbiVersion;
+  // Explicit mode from a recognized .note.ia16.mode record. An absent value
+  // does not establish a mode, preserving compatibility with handwritten and
+  // older IA-16 objects.
+  std::optional<bool> ia16ProtectedMode;
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
   std::optional<AArch64PauthAbiCoreInfo> aarch64PauthAbiCoreInfo;

@@ -4,6 +4,15 @@
 // RUN: %clang_cc1 -triple ia16-unknown-none-elf -ffreestanding -emit-obj \
 // RUN:   -o %t.o %s
 // RUN: llvm-readelf -n %t.o | FileCheck %s --check-prefix=NOTE
+// RUN: %clang_cc1 -triple ia16-unknown-none-elf -target-cpu i80286 \
+// RUN:   -target-feature +protected-mode -ffreestanding -emit-obj \
+// RUN:   -o %t.protected.o %s 2>&1 | FileCheck %s --allow-empty \
+// RUN:   --check-prefix=PROTECTED-DIAG
+// RUN: llvm-readelf -n %t.protected.o | FileCheck %s --check-prefix=PROTECTED
+// RUN: %clang_cc1 -triple ia16-unknown-none-elf -target-cpu i80286 \
+// RUN:   -target-feature -protected-mode -ffreestanding -emit-obj \
+// RUN:   -o %t.real.o %s
+// RUN: llvm-readelf -n %t.real.o | FileCheck %s --check-prefix=REAL
 
 // NOTE: Displaying notes found in: .note.ia16.abi
 // NOTE: Owner
@@ -12,6 +21,15 @@
 // NOTE: IA16
 // NOTE-SAME: NT_VERSION (version)
 // NOTE: description data: 49 41 31 36 2d 41 42 49 3a 30 2e 32 00
+
+// PROTECTED-DIAG-NOT: not a recognized feature
+// PROTECTED: Displaying notes found in: .note.ia16.mode
+// PROTECTED: IA16
+// PROTECTED: description data: 49 41 31 36 2d 4d 4f 44 45 3a 70 72 6f 74 65 63 74 65 64 00
+
+// REAL: Displaying notes found in: .note.ia16.mode
+// REAL: IA16
+// REAL: description data: 49 41 31 36 2d 4d 4f 44 45 3a 72 65 61 6c 00
 
 typedef int *near_pointer;
 typedef int __attribute__((address_space(1))) *far_pointer;
