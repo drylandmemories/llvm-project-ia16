@@ -15,6 +15,7 @@ namespace llvm {
 
 class IA16MachineFunctionInfo final : public MachineFunctionInfo {
   int VarArgsFrameIndex = 0;
+  Register SRetReturnReg = 0;
 
 public:
   IA16MachineFunctionInfo(const Function &, const TargetSubtargetInfo *) {}
@@ -28,6 +29,8 @@ public:
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }
+  Register getSRetReturnReg() const { return SRetReturnReg; }
+  void setSRetReturnReg(Register Reg) { SRetReturnReg = Reg; }
 };
 
 } // end namespace llvm

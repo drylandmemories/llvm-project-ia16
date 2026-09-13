@@ -11,12 +11,13 @@
 #include "IA16Subtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include <iterator>
 
 using namespace llvm;
@@ -156,6 +157,15 @@ SDValue IA16TargetLowering::LowerFormalArguments(
   int64_t Offset = 2; // Near return IP occupies the first entry-stack word.
   for (const ISD::InputArg &Arg : Ins) {
     EVT VT = Arg.VT;
+    if (Arg.Flags.isByVal()) {
+      if (VT != MVT::i16)
+        report_fatal_error("unsupported IA-16 byval pointer type");
+      unsigned Size = Arg.Flags.getByValSize();
+      int FI = MFI.CreateFixedObject(Size, Offset, true);
+      InVals.push_back(DAG.getFrameIndex(FI, MVT::i16));
+      Offset += alignTo(Size, 2u);
+      continue;
+    }
     if (VT != MVT::i8 && VT != MVT::i16)
       report_fatal_error("unsupported IA-16 argument type");
 
@@ -165,6 +175,16 @@ SDValue IA16TargetLowering::LowerFormalArguments(
                                 MachinePointerInfo::getFixedStack(
                                     DAG.getMachineFunction(), FI));
     InVals.push_back(Value);
+    if (Arg.Flags.isSRet()) {
+      auto *FuncInfo = MF.getInfo<IA16MachineFunctionInfo>();
+      if (FuncInfo->getSRetReturnReg())
+        report_fatal_error("multiple IA-16 sret arguments");
+      Register Reg =
+          MF.getRegInfo().createVirtualRegister(getRegClassFor(MVT::i16));
+      FuncInfo->setSRetReturnReg(Reg);
+      SDValue Copy = DAG.getCopyToReg(DAG.getEntryNode(), DL, Reg, Value);
+      Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Copy, Chain);
+    }
     Offset += 2;
   }
   if (IsVarArg) {
@@ -184,6 +204,12 @@ SDValue IA16TargetLowering::LowerCall(
   SDLoc &DL = CLI.DL;
   unsigned StackBytes = 0;
   for (const ISD::OutputArg &Out : CLI.Outs) {
+    if (Out.Flags.isByVal()) {
+      if (Out.VT != MVT::i16)
+        report_fatal_error("unsupported IA-16 byval pointer type");
+      StackBytes += alignTo(Out.Flags.getByValSize(), 2u);
+      continue;
+    }
     if (Out.VT != MVT::i16)
       report_fatal_error("unsupported IA-16 call argument type");
     StackBytes += 2;
@@ -192,6 +218,30 @@ SDValue IA16TargetLowering::LowerCall(
 
   // cdecl arguments are pushed right-to-left in complete 16-bit words.
   for (int I = static_cast<int>(CLI.Outs.size()) - 1; I >= 0; --I) {
+    const ISD::ArgFlagsTy &Flags = CLI.Outs[I].Flags;
+    if (Flags.isByVal()) {
+      unsigned Size = Flags.getByValSize();
+      unsigned RoundedSize = alignTo(Size, 2u);
+      SDValue Base = CLI.OutVals[I];
+      for (unsigned End = RoundedSize; End != 0; End -= 2) {
+        unsigned Offset = End - 2;
+        SDValue Address = Base;
+        if (Offset)
+          Address = DAG.getNode(ISD::ADD, DL, MVT::i16, Base,
+                                DAG.getConstant(Offset, DL, MVT::i16));
+        MVT LoadVT = Offset + 2 <= Size ? MVT::i16 : MVT::i8;
+        SDValue Load =
+            DAG.getLoad(LoadVT, DL, Chain, Address, MachinePointerInfo());
+        SDValue Value = Load;
+        Chain = Load.getValue(1);
+        if (LoadVT == MVT::i8)
+          Value = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Value);
+        SDValue Ops[] = {Value, Chain};
+        Chain = SDValue(
+            DAG.getMachineNode(X86::IA16_PUSH16r, DL, MVT::Other, Ops), 0);
+      }
+      continue;
+    }
     SDValue Ops[] = {CLI.OutVals[I], Chain};
     Chain =
         SDValue(DAG.getMachineNode(X86::IA16_PUSH16r, DL, MVT::Other, Ops), 0);
@@ -269,6 +319,15 @@ SDValue IA16TargetLowering::LowerReturn(
                                    : Index == 0 ? X86::AX : X86::DX;
     Chain = DAG.getCopyToReg(Chain, DL, Reg, OutVals[Index]);
     RetOps.push_back(DAG.getRegister(Reg, VT));
+  }
+
+  if (Register SRetReg = DAG.getMachineFunction()
+                             .getInfo<IA16MachineFunctionInfo>()
+                             ->getSRetReturnReg()) {
+    SDValue Value = DAG.getCopyFromReg(Chain, DL, SRetReg, MVT::i16);
+    Chain = Value.getValue(1);
+    Chain = DAG.getCopyToReg(Chain, DL, X86::AX, Value);
+    RetOps.push_back(DAG.getRegister(X86::AX, MVT::i16));
   }
   RetOps.push_back(Chain);
   assert(Chain.getNode() && "IA-16 return chain must be valid");
