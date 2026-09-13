@@ -2,38 +2,39 @@
 
 Schema: 1
 Project-ID: llvm-ia16-target
-Revision: 8
-Verified-At: 2026-09-13T14:43:08Z
-Verified-Against: 184a0ab0a84d5d02abe4c9c28dc84b15cdc17b86
+Revision: 9
+Verified-At: 2026-09-13T15:22:50Z
+Verified-Against: 954183a34ff7030d40bdc7907bdf6bbc41472a18
 Evidence-Layer: source-build-selected-test-object-relocation-scan-and-bounded-linker-partial
 
-Owner: Gate 1 SEGELF matrix partial; protected-mode blocker exposed
+Owner: Protected-mode SEGELF repair accepted; remaining Gate 1 matrix pending
 Task-System-Status: adopted-v1.0.0
 Package-Digest: 0a745fc715ebcd5f665b64c4e9ee9c495371707542594b1a3ad710a4d59a07ce
-Gate-1: incomplete; baseline, MC matrix, and SEG16 overflow passed; protected-mode SEGELF rejection fails; remaining matrix pending
+Gate-1: incomplete; baseline, MC matrix, SEG16 overflow, and protected-mode SEGELF rejection passed; remaining matrix pending
 Gate-2: incomplete
 Gate-3: incomplete
 Gate-4: incomplete
 Gate-5: incomplete
-Acceptance-Status: baseline-pass; G1-MC-pass; G1-SEGELF-partial; SEG16-overflow-pass; protected-mode-blocked; release-not-proven
+Acceptance-Status: baseline-pass; G1-MC-pass; G1-SEGELF-partial; SEG16-overflow-pass; protected-mode-rejection-pass; release-not-proven
 Execution-Mode: serial-same-checkout-two-workers-one-heavy-process
-Independent-Review: protected-mode signaling/rejection defect confirmed at exact source
-Blocker: protected-mode identity is lost before ELF linking, so LLD applies forbidden real-mode SEGELF semantics
+Independent-Review: exact repair candidate accepted with no findings
+Blocker: remaining malformed, retention, overflow, and wider relocation semantics are unproved
 
-At `184a0ab0a84d5d02abe4c9c28dc84b15cdc17b86`, Clang
-records `ia16-protected-mode = 1` in IR but warns that `+protected-mode` is
-unrecognized. The ELF32 object has `e_flags = 0`, only the generic ABI note,
-and one `R_386_SEG16`. LLD exits 0 and writes `0x1234`; ABI v0.2 requires
-protected-mode rejection. A nonauthor reviewer independently reproduced the
-defect. The accepted real-mode SEGELF and SEG16 overflow tests pass 2/2.
+At `954183a34ff7030d40bdc7907bdf6bbc41472a18`, Clang preserves IA-16 mode
+through an additive object note without changing ABI v0.2 or relocation
+numbers. LLD validates explicit modes and rejects `R_386_SEG16` in protected
+output across allocated and non-allocated paths. Unmarked inputs remain
+compatible and non-establishing.
 
-Malformed input, retention, remaining overflow boundaries, and wider semantics
-remain unproved. No broad `check-lld`, runtime,
-integration, package, release, deployment, or external acceptance is added.
+The exact-candidate build completed and six selected Clang/LLD tests pass 6/6.
+A protected ELF32 `EM_386` fixture retains ABI 0.2, protected mode, and one
+`R_386_SEG16`; LLD exits 1. Its real-mode counterpart links, writes bytes
+`34 12`, and retains the mode note. Independent review also exercised the
+non-allocated path and accepted overflow boundary.
 
 Requirements: `agent-state/ROADMAP.md`
 Evidence register: `agent-state/ACCEPTANCE.md`
-Capsule: `/Users/tedbullock/Developer/llvm-ia16-tasks/resume-gate-1-segelf-matrix-v1`
-Evidence: capsule `evidence/partial-184a0ab0a84d`
+Capsule: `/Users/tedbullock/Developer/llvm-ia16-tasks/repair-protected-mode-segelf-v1`
+Evidence: capsule `evidence/pass-954183a34ff7`
 
-Next-Outcome: IA-16 — Repair protected-mode SEGELF signaling and rejection
+Next-Outcome: IA-16 — Resume remaining Gate 1 SEGELF matrix after protected-mode repair
