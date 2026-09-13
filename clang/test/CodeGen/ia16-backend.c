@@ -1,5 +1,11 @@
-// RUN: %clang_cc1 -triple ia16-unknown-none-elf -target-cpu i8086 -O1 -S \
-// RUN:   -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple ia16-unknown-none-elf -target-cpu i8086 -O1 \
+// RUN:   -mllvm -verify-machineinstrs -S -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple ia16-unknown-none-elf -target-cpu i8086 -O0 \
+// RUN:   -mllvm -verify-machineinstrs -emit-obj -o %t.o0.o %s
+// RUN: %clang_cc1 -triple ia16-unknown-none-elf -target-cpu i8086 -O2 \
+// RUN:   -mllvm -verify-machineinstrs -emit-obj -o %t.o2.o %s
+// RUN: %clang_cc1 -triple ia16-unknown-none-elf -target-cpu i8086 -Os \
+// RUN:   -mllvm -verify-machineinstrs -emit-obj -o %t.os.o %s
 // RUN: %clang_cc1 -triple ia16-unknown-none-elf -target-cpu i8086 -O1 \
 // RUN:   -emit-obj -o %t.o %s
 // RUN: llvm-readobj --file-headers --relocations %t.o | FileCheck %s \
@@ -28,6 +34,12 @@ unsigned int shift_left(unsigned int value, unsigned int count) {
 unsigned int shift_right(unsigned int value, unsigned int count) {
   return value >> count;
 }
+int compare_signed(int left, int right) { return left < right; }
+int compare_equal(int left, int right) { return left == right; }
+int compare_unsigned(unsigned int left, unsigned int right) {
+  return left >= right;
+}
+int compare_add(int left, int right) { return (left < right) + 7; }
 
 // CHECK-LABEL: add:
 // CHECK:       pushw %bp
@@ -99,4 +111,26 @@ unsigned int shift_right(unsigned int value, unsigned int count) {
 // CHECK-LABEL: shift_right:
 // CHECK:       movb {{.*}}, %cl
 // CHECK:       shrw %cl,
+// CHECK:       retw
+
+// CHECK-LABEL: compare_signed:
+// CHECK:       movw $1,
+// CHECK:       cmpw
+// CHECK:       jl
+// CHECK:       movw $0,
+// CHECK:       retw
+
+// CHECK-LABEL: compare_equal:
+// CHECK:       cmpw
+// CHECK:       je
+// CHECK:       retw
+
+// CHECK-LABEL: compare_unsigned:
+// CHECK:       cmpw
+// CHECK:       jae
+// CHECK:       retw
+
+// CHECK-LABEL: compare_add:
+// CHECK:       cmpw
+// CHECK:       jl
 // CHECK:       retw

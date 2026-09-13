@@ -120,6 +120,37 @@ public:
         return;
       }
       break;
+    case ISD::SETCC: {
+      if (N->getValueType(0) != MVT::i16 ||
+          N->getOperand(0).getValueType() != MVT::i16 ||
+          N->getOperand(1).getValueType() != MVT::i16)
+        break;
+      auto *CCNode = cast<CondCodeSDNode>(N->getOperand(2));
+      std::optional<X86::CondCode> CC = getIA16CondCode(CCNode->get());
+      if (!CC)
+        break;
+      SDValue Ops[] = {N->getOperand(0), N->getOperand(1),
+                       CurDAG->getTargetConstant(*CC, DL, MVT::i8)};
+      CurDAG->SelectNodeTo(N, X86::IA16_SETCC16, MVT::i16, Ops);
+      return;
+    }
+    case ISD::SELECT_CC: {
+      if (N->getValueType(0) != MVT::i16 ||
+          N->getOperand(0).getValueType() != MVT::i16 ||
+          N->getOperand(1).getValueType() != MVT::i16 ||
+          N->getOperand(2).getValueType() != MVT::i16 ||
+          N->getOperand(3).getValueType() != MVT::i16)
+        break;
+      auto *CCNode = cast<CondCodeSDNode>(N->getOperand(4));
+      std::optional<X86::CondCode> CC = getIA16CondCode(CCNode->get());
+      if (!CC)
+        break;
+      SDValue Ops[] = {N->getOperand(0), N->getOperand(1), N->getOperand(2),
+                       N->getOperand(3),
+                       CurDAG->getTargetConstant(*CC, DL, MVT::i8)};
+      CurDAG->SelectNodeTo(N, X86::IA16_SELECTCC16, MVT::i16, Ops);
+      return;
+    }
     case ISD::ADD:
     case ISD::SUB:
     case ISD::AND:

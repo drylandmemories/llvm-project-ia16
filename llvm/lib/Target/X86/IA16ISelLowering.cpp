@@ -9,10 +9,13 @@
 #include "IA16ISelLowering.h"
 #include "IA16Subtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <iterator>
 
 using namespace llvm;
 
@@ -63,6 +66,64 @@ const char *IA16TargetLowering::getTargetNodeName(unsigned Opcode) const {
   default:
     return nullptr;
   }
+}
+
+MachineBasicBlock *IA16TargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *MBB) const {
+  bool IsSetCC = MI.getOpcode() == X86::IA16_SETCC16;
+  if (!IsSetCC && MI.getOpcode() != X86::IA16_SELECTCC16)
+    report_fatal_error("unexpected IA-16 custom-inserter instruction");
+
+  MachineFunction &MF = *MBB->getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const auto &TII = *MF.getSubtarget<IA16Subtarget>().getInstrInfo();
+  const BasicBlock *IRBB = MBB->getBasicBlock();
+  MachineFunction::iterator InsertAt = std::next(MBB->getIterator());
+  MachineBasicBlock *FalseMBB = MF.CreateMachineBasicBlock(IRBB);
+  MachineBasicBlock *SinkMBB = MF.CreateMachineBasicBlock(IRBB);
+  MF.insert(InsertAt, FalseMBB);
+  MF.insert(InsertAt, SinkMBB);
+
+  SinkMBB->splice(SinkMBB->begin(), MBB, std::next(MI.getIterator()),
+                  MBB->end());
+  SinkMBB->transferSuccessorsAndUpdatePHIs(MBB);
+  MBB->addSuccessor(FalseMBB);
+  MBB->addSuccessor(SinkMBB);
+  FalseMBB->addSuccessor(SinkMBB);
+
+  const DebugLoc &DL = MI.getDebugLoc();
+  Register TrueValue;
+  Register FalseValue;
+  unsigned CCOperand;
+  if (IsSetCC) {
+    TrueValue = MRI.createVirtualRegister(&X86::IA16_GR16RegClass);
+    FalseValue = MRI.createVirtualRegister(&X86::IA16_GR16RegClass);
+    CCOperand = 3;
+    BuildMI(*MBB, MI, DL, TII.get(X86::MOV16ri), TrueValue).addImm(1);
+  } else {
+    TrueValue = MI.getOperand(3).getReg();
+    FalseValue = MI.getOperand(4).getReg();
+    CCOperand = 5;
+  }
+  BuildMI(*MBB, MI, DL, TII.get(X86::CMP16rr))
+      .addReg(MI.getOperand(1).getReg())
+      .addReg(MI.getOperand(2).getReg());
+  BuildMI(*MBB, MI, DL, TII.get(X86::JCC_1))
+      .addMBB(SinkMBB)
+      .addImm(MI.getOperand(CCOperand).getImm());
+  if (IsSetCC)
+    BuildMI(*FalseMBB, FalseMBB->end(), DL, TII.get(X86::MOV16ri),
+            FalseValue)
+        .addImm(0);
+  BuildMI(*SinkMBB, SinkMBB->begin(), DL, TII.get(TargetOpcode::PHI),
+          MI.getOperand(0).getReg())
+      .addReg(FalseValue)
+      .addMBB(FalseMBB)
+      .addReg(TrueValue)
+      .addMBB(MBB);
+
+  MI.eraseFromParent();
+  return SinkMBB;
 }
 
 SDValue IA16TargetLowering::LowerFormalArguments(

@@ -328,6 +328,22 @@ let Defs = [EFLAGS], isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0,
 def IA16_ZEXT8_16 : I<0, Pseudo, (outs IA16_GR16_ABCD:$dst),
                        (ins IA16_GR8:$src), "", []>, Sched<[WriteALU]>;
 
+// The 8086 has no SETcc. Expand a comparison whose boolean value escapes into
+// a small control-flow diamond with 0/1 values and a PHI.
+let isCodeGenOnly = 1, isPseudo = 1, usesCustomInserter = 1,
+    hasSideEffects = 0 in
+def IA16_SETCC16 : I<0, Pseudo, (outs IA16_GR16:$dst),
+                     (ins IA16_GR16:$lhs, IA16_GR16:$rhs, i8imm:$cc),
+                     "", []>, Sched<[WriteALU]>;
+
+let isCodeGenOnly = 1, isPseudo = 1, usesCustomInserter = 1,
+    hasSideEffects = 0 in
+def IA16_SELECTCC16 : I<0, Pseudo, (outs IA16_GR16:$dst),
+                        (ins IA16_GR16:$lhs, IA16_GR16:$rhs,
+                             IA16_GR16:$true_value,
+                             IA16_GR16:$false_value, i8imm:$cc),
+                        "", []>, Sched<[WriteALU]>;
+
 // Other widths can also make use of the 32-bit xor, which may have a smaller
 // encoding and avoid partial register updates.
 let AddedComplexity = 10 in {

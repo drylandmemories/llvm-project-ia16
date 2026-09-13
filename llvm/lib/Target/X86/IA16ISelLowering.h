@@ -34,6 +34,10 @@ public:
     return MVT::i16;
   }
 
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *MBB) const override;
+
 private:
   SDValue LowerFormalArguments(
       SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
