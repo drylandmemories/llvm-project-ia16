@@ -256,6 +256,7 @@ tools.extend(
         "llvm-ir2vec",
         "llvm-isel-fuzzer",
         "llvm-ifs",
+        "llvm-ia16-mz",
         "llvm-install-name-tool",
         "llvm-jitlink",
         "llvm-opt-fuzzer",

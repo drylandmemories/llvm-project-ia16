@@ -108,6 +108,7 @@ set(LLVM_TEST_DEPENDS
   llvm-isel-fuzzer
   llvm-ifs
   llvm-install-name-tool
+  llvm-ia16-mz
   llvm-jitlink
   llvm-lib
   llvm-libtool-darwin

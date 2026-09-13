@@ -1,0 +1,112 @@
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/com.yaml -o %t.com.elf
+# RUN: llvm-ia16-mz --format=com -o %t.com %t.com.elf
+# RUN: %python -c "import pathlib; print(pathlib.Path(r'%t.com').read_bytes().hex())" | FileCheck %s --check-prefix=COMHEX
+# RUN: yaml2obj %t/mz.yaml -o %t.mz.elf
+# RUN: llvm-ia16-mz --format=mz --ss=16 --sp=4096 -o %t.exe %t.mz.elf
+# RUN: %python -c "import pathlib; print(pathlib.Path(r'%t.exe').read_bytes().hex())" | FileCheck %s --check-prefix=MZHEX
+# RUN: yaml2obj %t/mz-reloc.yaml -o %t.mz-reloc.elf
+# RUN: llvm-ia16-mz --format=mz -o %t-reloc.exe %t.mz-reloc.elf
+# RUN: %python -c "import pathlib; print(pathlib.Path(r'%t-reloc.exe').read_bytes().hex())" | FileCheck %s --check-prefix=MZRELOC
+# RUN: yaml2obj %t/mz-bss.yaml -o %t.mz-bss.elf
+# RUN: llvm-ia16-mz --format=mz -o %t-bss.exe %t.mz-bss.elf
+# RUN: %python -c "import pathlib; print(pathlib.Path(r'%t-bss.exe').read_bytes().hex())" | FileCheck %s --check-prefix=MZBSS
+# RUN: yaml2obj %t/com-overflow.yaml -o %t.com-overflow.elf
+# RUN: not llvm-ia16-mz --format=com -o %t-overflow.com %t.com-overflow.elf 2>&1 | FileCheck %s --check-prefix=OVERFLOW
+
+# COMHEX: b80100c3
+# MZHEX: 4d5a24000100000002000000ffff100000100000000000001c00000000000000b80100c3
+# MZRELOC: 4d5a24000100010002000000ffff0000feff0000000000001c00000002000000b80100c3
+# MZBSS: 4d5a24000100000002000200ffff0000feff0000000000001c00000000000000b80100c3
+# OVERFLOW: .COM load image and BSS exceed the 65280-byte limit
+
+#--- com.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+  Entry:   0x100
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x100
+    Content: B80100C3
+
+#--- mz-reloc.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+  Entry:   0
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0
+    Content: B80100C3
+  - Name:  .rel.text
+    Type:  SHT_REL
+    Info:  .text
+    Relocations:
+      - Offset: 0x2
+        Type:   R_386_SEG16
+
+#--- mz.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+  Entry:   0
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0
+    Content: B80100C3
+
+#--- mz-bss.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+  Entry:   0
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0
+    Content: B80100C3
+  - Name:    .bss
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_ALLOC, SHF_WRITE ]
+    Address: 4
+    Size:    32
+
+#--- com-overflow.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+  Entry:   0x100
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x100
+    Content: C3
+  - Name:    .bss
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_ALLOC, SHF_WRITE ]
+    Address: 0xffff
+    Size:    2
