@@ -559,6 +559,11 @@ void X86::relocateAlloc(InputSection &sec, uint8_t *buf) const {
       write32le(loc, result);
       continue;
     }
+    if (rel.type == R_386_HUGE8 && continuesExpression) {
+      const uint64_t symbolValue = val - rel.addend;
+      relocate(loc, rel, symbolValue + getImplicitAddend(loc, rel.type));
+      continue;
+    }
 
     // A symbol difference can exceed 16 bits before its adjacent subtraction
     // is applied even though the final result is representable.
