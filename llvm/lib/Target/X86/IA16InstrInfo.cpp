@@ -20,7 +20,8 @@ IA16InstrInfo::IA16InstrInfo(const IA16Subtarget &STI)
                       X86::IA16_ADJCALLSTACKUP, X86::CATCHRET, X86::RET16) {}
 
 bool IA16InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
-  if (MI.getOpcode() != X86::IA16_ZEXT8_16)
+  if (MI.getOpcode() != X86::IA16_ZEXT8_16 &&
+      MI.getOpcode() != X86::IA16_BSWAP16)
     return false;
 
   MachineBasicBlock &MBB = *MI.getParent();
@@ -28,6 +29,19 @@ bool IA16InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
   Register LowDst = RI.getSubReg(Dst, X86::sub_8bit);
+  Register HighDst = RI.getSubReg(Dst, X86::sub_8bit_hi);
+  if (MI.getOpcode() == X86::IA16_BSWAP16) {
+    assert(Dst == Src && LowDst && HighDst &&
+           "IA-16 byte swap needs a tied byte-addressable word");
+    BuildMI(MBB, MI, DL, get(X86::XCHG8rr))
+        .addDef(LowDst)
+        .addDef(HighDst)
+        .addReg(LowDst)
+        .addReg(HighDst);
+    MI.eraseFromParent();
+    return true;
+  }
+
   assert(LowDst && "IA-16 zero-extension destination needs a low byte");
 
   BuildMI(MBB, MI, DL, get(X86::XOR16rr), Dst)

@@ -307,6 +307,12 @@ public:
         return;
       }
       break;
+    case ISD::BSWAP:
+      if (N->getValueType(0) == MVT::i16) {
+        CurDAG->SelectNodeTo(N, X86::IA16_BSWAP16, MVT::i16, N->getOperand(0));
+        return;
+      }
+      break;
     case ISD::SMUL_LOHI:
     case ISD::UMUL_LOHI:
       if (N->getValueType(0) == MVT::i16 && N->getValueType(1) == MVT::i16) {

@@ -343,6 +343,14 @@ let Defs = [EFLAGS], isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0,
 def IA16_ZEXT8_16 : I<0, Pseudo, (outs IA16_GR16_ABCD:$dst),
                        (ins IA16_GR8:$src), "", []>, Sched<[WriteALU]>;
 
+// Byte swapping a word is available on every IA-16 CPU as XCHG between the
+// high and low byte of AX/BX/CX/DX. Constrain the value to one of those words
+// and expand after register allocation, when both byte subregisters are known.
+let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0,
+    Constraints = "$src = $dst" in
+def IA16_BSWAP16 : I<0, Pseudo, (outs IA16_GR16_ABCD:$dst),
+                      (ins IA16_GR16_ABCD:$src), "", []>, Sched<[WriteALU]>;
+
 // The 8086 has no SETcc. Expand a comparison whose boolean value escapes into
 // a small control-flow diamond with 0/1 values and a PHI.
 let isCodeGenOnly = 1, isPseudo = 1, usesCustomInserter = 1,
