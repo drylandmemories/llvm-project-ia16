@@ -329,6 +329,7 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_386_SEG16:
     // Paragraph containing the real-mode linear address.
+    checkIntUInt(ctx, loc, val >> 4, 16, rel);
     write16le(loc, val >> 4);
     break;
   case R_386_SUB16:
