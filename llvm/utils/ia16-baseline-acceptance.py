@@ -19,6 +19,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from typing import Any, Iterable
 
@@ -289,7 +290,8 @@ def sha256_file(path: pathlib.Path) -> str:
 
 def write_text(path: pathlib.Path, value: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(value, encoding="utf-8", newline="\n")
+    with path.open("w", encoding="utf-8", newline="\n") as stream:
+        stream.write(value)
 
 
 def write_json(path: pathlib.Path, value: Any) -> None:
@@ -531,6 +533,10 @@ def account_load_image(
 
 
 def self_test() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        output = pathlib.Path(directory) / "nested" / "line-endings.txt"
+        write_text(output, "first\nsecond\n")
+        assert output.read_bytes() == b"first\nsecond\n"
     sample = """
 00000100 <_start>:
  100: 55             pushw %bp
