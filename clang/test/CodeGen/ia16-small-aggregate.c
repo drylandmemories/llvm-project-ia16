@@ -28,8 +28,9 @@ struct three_bytes call_three(struct three_bytes value) {
 
 // One-byte aggregates occupy one complete stack word and return through AX.
 // CHECK-LABEL: identity_one:
-// CHECK:       movb 4(%bp), %al
-// CHECK:       movb $0, %ah
+// CHECK:       movb 4(%bp), [[ONE_BYTE:%[a-z]+]]
+// CHECK:       xorw [[ONE_RESULT:%[a-z]+]], [[ONE_RESULT]]
+// CHECK:       movb [[ONE_BYTE]], {{%[a-z]+}}
 // CHECK:       retw
 
 // Three-byte aggregates occupy two stack words and return through DX:AX.
@@ -40,7 +41,9 @@ struct three_bytes call_three(struct three_bytes value) {
 // CHECK:       retw
 
 // CHECK-LABEL: call_one:
-// CHECK:       movb 4(%bp), %al
+// CHECK:       movb 4(%bp),
+// CHECK:       xorw
+// CHECK:       movb
 // CHECK:       pushw
 // CHECK-NEXT:  callw external_one
 // CHECK:       addw $2,
@@ -49,8 +52,10 @@ struct three_bytes call_three(struct three_bytes value) {
 // The high word is pushed first, leaving the aggregate's low-address word at
 // the callee's first argument offset.
 // CHECK-LABEL: call_three:
-// CHECK:       movb ({{%[a-z]+}}), %al
-// CHECK:       pushw %ax
+// CHECK:       movb ({{%[a-z]+}}),
+// CHECK:       xorw
+// CHECK:       movb
+// CHECK:       pushw
 // CHECK:       movw 4(%bp),
 // CHECK-NEXT:  pushw
 // CHECK-NEXT:  callw external_three

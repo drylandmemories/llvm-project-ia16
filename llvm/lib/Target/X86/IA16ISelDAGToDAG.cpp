@@ -50,6 +50,23 @@ static std::optional<X86::CondCode> getIA16CondCode(ISD::CondCode CC) {
 }
 
 class IA16DAGToDAGISel final : public SelectionDAGISel {
+  SDValue zeroExtendByte(SDValue Value, const SDLoc &DL) {
+    return SDValue(
+        CurDAG->getMachineNode(X86::IA16_ZEXT8_16, DL, MVT::i16, Value), 0);
+  }
+
+  SDValue signExtendByte(SDValue Value, const SDLoc &DL) {
+    SDValue Extended = zeroExtendByte(Value, DL);
+    SDValue Bias(
+        CurDAG->getMachineNode(X86::MOV16ri, DL, MVT::i16,
+                               CurDAG->getTargetConstant(0x80, DL, MVT::i16)),
+        0);
+    SDValue Biased(
+        CurDAG->getMachineNode(X86::XOR16rr, DL, MVT::i16, Extended, Bias), 0);
+    return SDValue(
+        CurDAG->getMachineNode(X86::SUB16rr, DL, MVT::i16, Biased, Bias), 0);
+  }
+
   bool selectAddress(SDValue Ptr, const SDLoc &DL,
                      SmallVectorImpl<SDValue> &Ops) {
     SDValue Base;
@@ -186,8 +203,14 @@ public:
     case ISD::ZERO_EXTEND:
       if (N->getValueType(0) == MVT::i16 &&
           N->getOperand(0).getValueType() == MVT::i8) {
-        CurDAG->SelectNodeTo(N, X86::IA16_ZEXT8_16, MVT::i16,
-                             N->getOperand(0));
+        ReplaceNode(N, zeroExtendByte(N->getOperand(0), DL).getNode());
+        return;
+      }
+      break;
+    case ISD::SIGN_EXTEND:
+      if (N->getValueType(0) == MVT::i16 &&
+          N->getOperand(0).getValueType() == MVT::i8) {
+        ReplaceNode(N, signExtendByte(N->getOperand(0), DL).getNode());
         return;
       }
       break;
@@ -374,6 +397,20 @@ public:
       unsigned Opc = Load->getMemoryVT() == MVT::i8 ? X86::MOV8rm
                                                     : X86::MOV16rm;
       MVT VT = Load->getMemoryVT() == MVT::i8 ? MVT::i8 : MVT::i16;
+      if (VT == MVT::i8 && Load->getValueType(0) == MVT::i16) {
+        SDVTList VTs = CurDAG->getVTList(MVT::i8, MVT::Other);
+        MachineSDNode *ByteLoad =
+            CurDAG->getMachineNode(X86::MOV8rm, DL, VTs, Ops);
+        CurDAG->setNodeMemRefs(ByteLoad, {Load->getMemOperand()});
+        SDValue Value(ByteLoad, 0);
+        SDValue Extended = Load->getExtensionType() == ISD::SEXTLOAD
+                               ? signExtendByte(Value, DL)
+                               : zeroExtendByte(Value, DL);
+        ReplaceUses(SDValue(N, 0), Extended);
+        ReplaceUses(SDValue(N, 1), SDValue(ByteLoad, 1));
+        CurDAG->RemoveDeadNode(N);
+        return;
+      }
       CurDAG->SelectNodeTo(N, Opc, VT, MVT::Other, Ops);
       return;
     }

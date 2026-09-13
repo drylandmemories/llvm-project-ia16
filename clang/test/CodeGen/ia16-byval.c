@@ -50,7 +50,8 @@ struct five_bytes call_five(struct five_bytes value) {
 // CHECK-LABEL: call_endpoints:
 // CHECK:       leaw 4(%bp),
 // CHECK:       movb ({{%[a-z]+}}),
-// CHECK:       movb $0,
+// CHECK:       xorw
+// CHECK:       movb
 // CHECK:       pushw
 // CHECK:       movw ({{%[a-z]+}}),
 // CHECK:       pushw

@@ -210,7 +210,7 @@ SDValue IA16TargetLowering::LowerCall(
       StackBytes += alignTo(Out.Flags.getByValSize(), 2u);
       continue;
     }
-    if (Out.VT != MVT::i16)
+    if (Out.VT != MVT::i8 && Out.VT != MVT::i16)
       report_fatal_error("unsupported IA-16 call argument type");
     StackBytes += 2;
   }
@@ -242,7 +242,13 @@ SDValue IA16TargetLowering::LowerCall(
       }
       continue;
     }
-    SDValue Ops[] = {CLI.OutVals[I], Chain};
+    SDValue Value = CLI.OutVals[I];
+    if (CLI.Outs[I].VT == MVT::i8) {
+      unsigned ExtendOpcode =
+          CLI.Outs[I].Flags.isSExt() ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+      Value = DAG.getNode(ExtendOpcode, DL, MVT::i16, Value);
+    }
+    SDValue Ops[] = {Value, Chain};
     Chain =
         SDValue(DAG.getMachineNode(X86::IA16_PUSH16r, DL, MVT::Other, Ops), 0);
   }
