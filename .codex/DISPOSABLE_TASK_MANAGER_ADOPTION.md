@@ -1,15 +1,29 @@
 # Disposable Task Manager adoption
 
-Status: **v1.0.0 interface installed; acceptance is in `agent-state/CURRENT.md`**
+Status: **v1.1.1 pinned for new capsules; acceptance is in `agent-state/CURRENT.md`**
 
 ## Immutable release
 
-- Package: `/Users/tedbullock/Developer/CodexTaskSystem/releases/1.0.0/software-task`
-- Digest: `0a745fc715ebcd5f665b64c4e9ee9c495371707542594b1a3ad710a4d59a07ce`
-- Release: `15b1d60f87ffb4a402abff03d0f510a3872664bd` / `software-task-v1.0.0`
-- Reviewed source: `9a9dbb2b429177273d50e331ee48f13a07d44a0c`
+- Package: `/Users/tedbullock/Developer/CodexTaskSystem/releases/1.1.1/software-task`
+- Digest: `8065099ee4a84eaf9aed5caf1dfb4d61554bc619f1522a02957a85176798a50a`
+- Release: `software-task-v1.1.1`
+- Reviewed source: `f3598929281d2e5e4c8eac9983ebbf6c1a29bdb4`
 
 Use this versioned script; the global skill is only an entry point. Never copy, fork, or vendor the package.
+
+Existing capsules retain their original packages and inputs. Adopt only at a
+clean task boundary; never repin a running capsule. Preflight with
+`init --dry-run`, then use ordinary admission: preflight grants no custody.
+Read the package's sizing and GitHub references at creation/action time.
+One useful result includes its focused verification; repository size or task
+count alone does not justify splitting. Select model and effort separately
+from actual uncertainty, preserve user choices, and confirm launch settings.
+Environment failures require environment diagnosis, not automatic escalation.
+Verify GitHub host/repository against PROJECT, configuration and origin, then
+authenticated visibility before any separately authorized write. The upstream
+origin is identity evidence, not permission to publish to upstream LLVM.
+Resolve the canonical native project before dispatch; queued creation is not
+custody. Preserve SERIAL_WORKFLOW receipts, resource limits and all gates.
 
 ## Local interface and operation
 
