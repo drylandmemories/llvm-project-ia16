@@ -28,6 +28,7 @@
 #include "ToolChains/HLSL.h"
 #include "ToolChains/Haiku.h"
 #include "ToolChains/Hexagon.h"
+#include "ToolChains/IA16.h"
 #include "ToolChains/Hurd.h"
 #include "ToolChains/LFILinux.h"
 #include "ToolChains/Lanai.h"
@@ -6823,6 +6824,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
   auto &TC = ToolChains[Target.str()];
   if (!TC) {
     switch (Target.getOS()) {
+    case llvm::Triple::DOS:
+      TC = std::make_unique<toolchains::IA16ToolChain>(*this, Target, Args);
+      break;
     case llvm::Triple::AIX:
       TC = std::make_unique<toolchains::AIX>(*this, Target, Args);
       break;

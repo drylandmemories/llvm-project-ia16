@@ -43,6 +43,38 @@ void IA16InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 Register SrcReg, bool KillSrc,
                                 bool RenamableDest,
                                 bool RenamableSrc) const {
+  if (X86::IA16_GR16RegClass.contains(DestReg) &&
+      X86::IA16_GR8RegClass.contains(SrcReg)) {
+    Register Low = RI.getSubReg(DestReg, X86::sub_8bit);
+    Register High = RI.getSubReg(DestReg, X86::sub_8bit_hi);
+    if (!Low || !High)
+      report_fatal_error("IA-16 byte-to-word copy needs AX/BX/CX/DX");
+    if (SrcReg == Low) {
+      BuildMI(MBB, I, DL, get(X86::MOV8ri), High).addImm(0);
+      return;
+    }
+    if (SrcReg == High) {
+      BuildMI(MBB, I, DL, get(X86::MOV8rr), Low).addReg(SrcReg);
+      BuildMI(MBB, I, DL, get(X86::MOV8ri), High).addImm(0);
+      return;
+    }
+    BuildMI(MBB, I, DL, get(X86::XOR16rr), DestReg)
+        .addReg(DestReg, RegState::Undef)
+        .addReg(DestReg, RegState::Undef);
+    BuildMI(MBB, I, DL, get(X86::MOV8rr), Low)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+  if (X86::IA16_GR8RegClass.contains(DestReg) &&
+      X86::IA16_GR16RegClass.contains(SrcReg)) {
+    Register Low = RI.getSubReg(SrcReg, X86::sub_8bit);
+    if (!Low)
+      report_fatal_error("IA-16 word-to-byte copy needs AX/BX/CX/DX");
+    if (DestReg != Low)
+      BuildMI(MBB, I, DL, get(X86::MOV8rr), DestReg)
+          .addReg(Low, getKillRegState(KillSrc));
+    return;
+  }
   if (X86::GR16_NOREXRegClass.contains(DestReg, SrcReg)) {
     BuildMI(MBB, I, DL, get(X86::MOV16rr), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc), 0);
@@ -53,7 +85,8 @@ void IA16InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         .addReg(SrcReg, getKillRegState(KillSrc), 0);
     return;
   }
-  report_fatal_error("unsupported IA-16 physical register copy");
+  report_fatal_error(Twine("unsupported IA-16 physical register copy from ") +
+                     RI.getName(SrcReg) + " to " + RI.getName(DestReg));
 }
 
 void IA16InstrInfo::storeRegToStackSlot(

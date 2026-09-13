@@ -162,6 +162,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-dis
     llvm-dwarfdump
     llvm-ifs
+    llvm-ia16-mz
     llvm-link
     llvm-lto2
     llvm-mc

@@ -25,14 +25,20 @@ static Reloc::Model getIA16RelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
+static CodeModel::Model
+getIA16CodeModel(std::optional<CodeModel::Model> CM) {
+  // Clang maps the six segmented memory models onto LLVM's existing code-model
+  // enum. Unlike the generic helper, IA-16 intentionally accepts Tiny.
+  return CM.value_or(CodeModel::Small);
+}
+
 IA16TargetMachine::IA16TargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(
           T, TT.computeDataLayout(), TT, CPU.empty() ? "i8086" : CPU, FS,
-          Options, getIA16RelocModel(RM),
-          getEffectiveCodeModel(CM, CodeModel::Small), OL),
+          Options, getIA16RelocModel(RM), getIA16CodeModel(CM), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, CPU, /*TuneCPU=*/CPU, FS, *this) {
   if (JIT)
