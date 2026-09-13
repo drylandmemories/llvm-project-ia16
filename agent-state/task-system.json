@@ -1,11 +1,8 @@
 {
   "schema": 1,
-  "project_id": "llvm-ia16",
+  "project_id": "llvm-ia16-target",
   "repository": "https://github.com/llvm/llvm-project.git",
   "template_version": "1.0.0",
   "template_digest": "0a745fc715ebcd5f665b64c4e9ee9c495371707542594b1a3ad710a4d59a07ce",
-  "template_location": "/Users/tedbullock/.agents/skills/software-task",
-  "required_references": [
-    ".codex/DISPOSABLE_TASK_MANAGER_ADOPTION.md"
-  ]
+  "required_references": []
 }

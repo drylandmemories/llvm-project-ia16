@@ -1,40 +1,22 @@
 # Disposable Task Manager adoption
 
-Status: **shared package pinned; capsule validation pending**
+Status: **v1.0.0 interface installed; acceptance is in `agent-state/CURRENT.md`**
 
-## Scope
+## Immutable release
 
-This repository will use Ted's shared, versioned Disposable Task Manager package for generic Feature/Bug task setup and capsule initialization/validation. This repository owns only LLVM IA-16-specific boundaries, durable state, and handoffs.
+- Package: `/Users/tedbullock/Developer/CodexTaskSystem/releases/1.0.0/software-task`
+- Digest: `0a745fc715ebcd5f665b64c4e9ee9c495371707542594b1a3ad710a4d59a07ce`
+- Release: `15b1d60f87ffb4a402abff03d0f510a3872664bd` / `software-task-v1.0.0`
+- Reviewed source: `9a9dbb2b429177273d50e331ee48f13a07d44a0c`
 
-The shared package is owned by Codex task `01a0993f-75bf-7492-b4fd-91b4ecd034c3` and is published as:
+Use this versioned script; the global skill is only an entry point. Never copy, fork, or vendor the package.
 
-- version: `1.0.0`
-- location: `/Users/tedbullock/.agents/skills/software-task`
-- package digest: `0a745fc715ebcd5f665b64c4e9ee9c495371707542594b1a3ad710a4d59a07ce`
+## Local interface and operation
 
-The machine-readable pin is `agent-state/task-system.json`. Project-specific
-task boundaries and current factual state live in `agent-state/PROJECT.md` and
-`agent-state/CURRENT.md`; generic task behavior remains owned by the shared
-package and is not copied into this repository.
+`AGENTS.md`, `agent-state/*`, and the one-shot adoption owner are repository-owned. Keep capsules outside the checkout.
 
-## Activation contract
+Preserve active work. Start one bounded Feature or Bug from an owned clean worktree and exact commit. Record scope, exclusions, authorization, fixture, finish, and review. The fresh task reads and validates its capsule. Finish or checkpoint truthfully, publish reviewed facts to CURRENT, hand off, and retire.
 
-Invoke `.codex/agents/disposable-task-adoption-owner.toml` once the shared package is published, or for one bounded repair of this local integration. The owner must:
+Keep evidence layers separate. The CLI does not dispatch tasks, integrate, deploy, or authorize consequences.
 
-1. Preserve all active dirty work and identify ownership before edits.
-2. Bind to the published shared package without copying its generic implementation.
-3. Add only the project-local state/capsule paths required by the published contract.
-4. Validate configuration and capsule behavior without modifying LLVM/Clang product files.
-5. Record a compact handoff and retire; no future task may depend on its conversation history.
-
-## Project boundary
-
-Local durable guidance must distinguish:
-
-- IA-16 target implementation, tests, ABI/code-generation decisions, and upstream-integration evidence owned by this project.
-- General LLVM/Clang behavior and unrelated upstream cleanup, which are outside a task unless explicitly admitted.
-- Source, build, test, integration, and runtime evidence, which remain separate acceptance layers.
-
-## Completion gate
-
-Adoption is complete only when the shared package version/location is recorded, its initializer and validator pass in a disposable test capsule, project-local state is within the shared size/startup limits, and the migration task leaves a bounded durable handoff before retiring.
+Invoke the adoption owner only for one bounded repair or migration; preserve compiler work, validate, record, and retire.
