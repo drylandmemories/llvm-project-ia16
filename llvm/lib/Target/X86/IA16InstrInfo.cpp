@@ -10,12 +10,14 @@
 #include "IA16Subtarget.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
 IA16InstrInfo::IA16InstrInfo(const IA16Subtarget &STI)
-    : X86GenInstrInfo(STI, RI, X86::ADJCALLSTACKDOWN32,
-                      X86::ADJCALLSTACKUP32, X86::CATCHRET, X86::RET16) {}
+    : X86GenInstrInfo(STI, RI, X86::IA16_ADJCALLSTACKDOWN,
+                      X86::IA16_ADJCALLSTACKUP, X86::CATCHRET, X86::RET16) {}
 
 bool IA16InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   if (MI.getOpcode() != X86::IA16_ZEXT8_16)
@@ -118,4 +120,128 @@ void IA16InstrInfo::loadRegFromStackSlot(
       .addImm(0)
       .addReg(0)
       .setMIFlag(Flags);
+}
+
+unsigned IA16InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
+  if (MI.isDebugInstr() || MI.isMetaInstruction())
+    return 0;
+  if (MI.getOpcode() == TargetOpcode::INLINEASM ||
+      MI.getOpcode() == TargetOpcode::INLINEASM_BR) {
+    const MachineFunction &MF = *MI.getParent()->getParent();
+    return getInlineAsmLength(MI.getOperand(0).getSymbolName(),
+                              *MF.getTarget().getMCAsmInfo());
+  }
+  if (MI.getOpcode() == X86::JCC_1)
+    return 2;
+  if (MI.getOpcode() == X86::JMP_2)
+    return 3;
+
+  // IA-16 instructions are always shorter than the architectural x86 maximum
+  // of 15 bytes.  A conservative upper bound can relax an extra branch but can
+  // never leave an out-of-range short Jcc in the output.
+  return 15;
+}
+
+MachineBasicBlock *
+IA16InstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
+  assert((MI.getOpcode() == X86::JCC_1 || MI.getOpcode() == X86::JMP_2) &&
+         "unexpected IA-16 branch opcode");
+  return MI.getOperand(0).getMBB();
+}
+
+bool IA16InstrInfo::isBranchOffsetInRange(unsigned BranchOpcode,
+                                          int64_t BranchOffset) const {
+  if (BranchOpcode == X86::JCC_1)
+    return isInt<8>(BranchOffset);
+  if (BranchOpcode == X86::JMP_2)
+    return true;
+  llvm_unreachable("unexpected IA-16 branch opcode");
+}
+
+bool IA16InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
+                                  MachineBasicBlock *&TBB,
+                                  MachineBasicBlock *&FBB,
+                                  SmallVectorImpl<MachineOperand> &Cond,
+                                  bool) const {
+  TBB = nullptr;
+  FBB = nullptr;
+  Cond.clear();
+
+  auto Last = MBB.getLastNonDebugInstr();
+  if (Last == MBB.end())
+    return false;
+  if (!Last->isBranch())
+    return Last->isTerminator();
+  if (Last->getOpcode() != X86::JCC_1 && Last->getOpcode() != X86::JMP_2)
+    return true;
+
+  if (Last->getOpcode() == X86::JCC_1) {
+    TBB = Last->getOperand(0).getMBB();
+    Cond.push_back(Last->getOperand(1));
+    return false;
+  }
+
+  TBB = Last->getOperand(0).getMBB();
+  auto FirstTerminator = MBB.getFirstTerminator();
+  if (FirstTerminator == Last)
+    return false;
+  auto Previous = std::prev(Last);
+  while (Previous->isDebugInstr())
+    --Previous;
+  if (Previous->getOpcode() != X86::JCC_1)
+    return true;
+  FBB = TBB;
+  TBB = Previous->getOperand(0).getMBB();
+  Cond.push_back(Previous->getOperand(1));
+  return false;
+}
+
+unsigned IA16InstrInfo::removeBranch(MachineBasicBlock &MBB,
+                                     int *BytesRemoved) const {
+  unsigned Count = 0;
+  unsigned Bytes = 0;
+  while (true) {
+    auto Last = MBB.getLastNonDebugInstr();
+    if (Last == MBB.end() ||
+        (Last->getOpcode() != X86::JCC_1 && Last->getOpcode() != X86::JMP_2))
+      break;
+    Bytes += getInstSizeInBytes(*Last);
+    Last->eraseFromParent();
+    ++Count;
+  }
+  if (BytesRemoved)
+    *BytesRemoved = Bytes;
+  return Count;
+}
+
+unsigned IA16InstrInfo::insertBranch(
+    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
+    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+  assert(TBB && "IA-16 branch needs a destination");
+  assert(Cond.size() <= 1 && "invalid IA-16 branch condition");
+  unsigned Count = 0;
+  unsigned Bytes = 0;
+  if (!Cond.empty()) {
+    BuildMI(&MBB, DL, get(X86::JCC_1)).addMBB(TBB).add(Cond.front());
+    ++Count;
+    Bytes += 2;
+  } else {
+    assert(!FBB && "unconditional IA-16 branch cannot have a false block");
+  }
+  if (FBB || Cond.empty()) {
+    BuildMI(&MBB, DL, get(X86::JMP_2)).addMBB(FBB ? FBB : TBB);
+    ++Count;
+    Bytes += 3;
+  }
+  if (BytesAdded)
+    *BytesAdded = Bytes;
+  return Count;
+}
+
+bool IA16InstrInfo::reverseBranchCondition(
+    SmallVectorImpl<MachineOperand> &Cond) const {
+  assert(Cond.size() == 1 && "invalid IA-16 branch condition");
+  Cond[0].setImm(X86::GetOppositeBranchCondition(
+      static_cast<X86::CondCode>(Cond[0].getImm())));
+  return false;
 }

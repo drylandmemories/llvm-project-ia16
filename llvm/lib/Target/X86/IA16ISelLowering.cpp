@@ -44,6 +44,9 @@ IA16TargetLowering::IA16TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::i16, Legal);
   setOperationAction(ISD::SELECT, MVT::i8, Expand);
   setOperationAction(ISD::SELECT, MVT::i16, Expand);
+  setOperationAction(ISD::SHL_PARTS, MVT::i16, Expand);
+  setOperationAction(ISD::SRL_PARTS, MVT::i16, Expand);
+  setOperationAction(ISD::SRA_PARTS, MVT::i16, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i16, Expand);
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
@@ -179,18 +182,19 @@ SDValue IA16TargetLowering::LowerCall(
 
   SelectionDAG &DAG = CLI.DAG;
   SDLoc &DL = CLI.DL;
-  SDValue Chain = CLI.Chain;
   unsigned StackBytes = 0;
+  for (const ISD::OutputArg &Out : CLI.Outs) {
+    if (Out.VT != MVT::i16)
+      report_fatal_error("unsupported IA-16 call argument type");
+    StackBytes += 2;
+  }
+  SDValue Chain = DAG.getCALLSEQ_START(CLI.Chain, StackBytes, 0, DL);
 
   // cdecl arguments are pushed right-to-left in complete 16-bit words.
   for (int I = static_cast<int>(CLI.Outs.size()) - 1; I >= 0; --I) {
-    EVT VT = CLI.Outs[I].VT;
-    if (VT != MVT::i16)
-      report_fatal_error("unsupported IA-16 call argument type");
     SDValue Ops[] = {CLI.OutVals[I], Chain};
-    Chain = SDValue(
-        DAG.getMachineNode(X86::IA16_PUSH16r, DL, MVT::Other, Ops), 0);
-    StackBytes += 2;
+    Chain =
+        SDValue(DAG.getMachineNode(X86::IA16_PUSH16r, DL, MVT::Other, Ops), 0);
   }
 
   SDValue Callee = CLI.Callee;
@@ -215,6 +219,12 @@ SDValue IA16TargetLowering::LowerCall(
   Chain = SDValue(Call, 0);
   SDValue Glue(Call, 1);
 
+  // Keep the call-frame destroy between the call and its result copies. This
+  // makes even otherwise-pure legalization libcalls retain and serialize the
+  // caller cleanup through the returned value dependency.
+  Chain = DAG.getCALLSEQ_END(Chain, StackBytes, 0, Glue, DL);
+  Glue = Chain.getValue(1);
+
   for (auto [Index, In] : llvm::enumerate(CLI.Ins)) {
     if (In.VT != MVT::i16)
       report_fatal_error("unsupported IA-16 call result type");
@@ -226,15 +236,6 @@ SDValue IA16TargetLowering::LowerCall(
     InVals.push_back(Result);
     Chain = Result.getValue(1);
     Glue = Result.getValue(2);
-  }
-
-  if (StackBytes) {
-    SDValue StackPointer = DAG.getCopyFromReg(Chain, DL, X86::SP, MVT::i16);
-    SDValue Amount = DAG.getTargetConstant(StackBytes, DL, MVT::i16);
-    SDValue Adjusted = SDValue(
-        DAG.getMachineNode(X86::ADD16ri, DL, MVT::i16, StackPointer, Amount),
-        0);
-    Chain = DAG.getCopyToReg(StackPointer.getValue(1), DL, X86::SP, Adjusted);
   }
   return Chain;
 }

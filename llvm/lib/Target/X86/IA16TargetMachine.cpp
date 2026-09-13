@@ -9,6 +9,7 @@
 #include "IA16TargetMachine.h"
 #include "IA16MachineFunctionInfo.h"
 #include "TargetInfo/X86TargetInfo.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -70,6 +71,8 @@ public:
     addPass(createIA16ISelDag(getIA16TargetMachine(), getOptLevel()));
     return false;
   }
+
+  void addPreEmitPass() override { addPass(&BranchRelaxationPassID); }
 };
 } // end anonymous namespace
 

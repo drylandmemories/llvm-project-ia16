@@ -323,6 +323,21 @@ def MOV32r0  : I<0, Pseudo, (outs GR32:$dst), (ins), "",
 // XOR of the destination word followed by a move into its low byte. Keeping
 // the destination in AX/BX/CX/DX guarantees that the low-byte subregister
 // exists; early-clobber keeps the byte source live across the XOR.
+//
+// IA-16 also uses target-specific call-frame markers. The i386 markers name
+// ESP and SSP, neither of which is an allocatable IA-16 resource. These
+// markers carry scheduling dependencies. Argument pushes perform the setup;
+// frame lowering erases the setup marker and expands the destroy marker into
+// the 16-bit cdecl SP adjustment.
+let isCodeGenOnly = 1, Defs = [SP], Uses = [SP], SchedRW = [WriteALU] in {
+def IA16_ADJCALLSTACKDOWN : I<0, Pseudo, (outs),
+                                 (ins i16imm:$amt1, i16imm:$amt2),
+                                 "#IA16_ADJCALLSTACKDOWN", []>;
+def IA16_ADJCALLSTACKUP   : I<0, Pseudo, (outs),
+                                 (ins i16imm:$amt1, i16imm:$amt2),
+                                 "#IA16_ADJCALLSTACKUP", []>;
+}
+
 let Defs = [EFLAGS], isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0,
     Constraints = "@earlyclobber $dst" in
 def IA16_ZEXT8_16 : I<0, Pseudo, (outs IA16_GR16_ABCD:$dst),

@@ -884,6 +884,20 @@ set(ve_SOURCES
 
 set(m68k_SOURCES ${GENERIC_SOURCES})
 
+# The initial IA-16 runtime slice provides the 32-bit division family and the
+# shift helpers needed by SelectionDAG legalization. Keep this list explicit:
+# the remaining generic builtins are added only as their 16-bit ABI lowering is
+# validated.
+set(ia16_SOURCES
+  divsi3.c
+  modsi3.c
+  udivsi3.c
+  umodsi3.c
+  ia16/ashlsi3.S
+  ia16/ashrsi3.S
+  ia16/lshrsi3.S
+)
+
 add_custom_target(builtins)
 set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT/Metatargets")
 

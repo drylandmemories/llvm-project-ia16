@@ -45,7 +45,7 @@ define i16 @signed_max(i16 %a, i16 %b) {
 ; CHECK-LABEL: signed_max:
 ; CHECK:       cmpw
 ; CHECK-NEXT:  jg
-; CHECK:       jmp
+; CHECK-NOT:   jmp
 ; CHECK:       retw
 entry:
   %greater = icmp sgt i16 %a, %b

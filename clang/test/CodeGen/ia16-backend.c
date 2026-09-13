@@ -44,6 +44,14 @@ int call_indirect(int (*function)(int), int value) { return function(value); }
 unsigned int count_leading_long(unsigned long value) {
   return __builtin_clzl(value);
 }
+int branch_byte(unsigned char value) {
+  if (value)
+    return callee(value, 1);
+  return 0;
+}
+int two_calls(int value) {
+  return callee(value, 1) + callee(value, 2);
+}
 
 // CHECK-LABEL: add:
 // CHECK:       pushw %bp
@@ -67,7 +75,7 @@ unsigned int count_leading_long(unsigned long value) {
 // CHECK:       cmpw
 // CHECK:       jle
 // CHECK:       callw callee
-// CHECK:       callw callee
+// CHECK:       addw $4,
 // CHECK:       retw
 
 // CHECK-LABEL: byte_inc:
@@ -92,8 +100,9 @@ unsigned int count_leading_long(unsigned long value) {
 
 // RELOC:      Format: elf32-i386
 // RELOC:      Machine: EM_386
-// RELOC-COUNT-3: R_386_PC16
+// RELOC-COUNT-2: R_386_PC16 callee
 // RELOC-COUNT-2: R_386_16 global_word
+// RELOC-COUNT-3: R_386_PC16 callee
 
 // CHECK-LABEL: store_pointer:
 // CHECK:       movw %bx, -2(%bp)
@@ -148,4 +157,20 @@ unsigned int count_leading_long(unsigned long value) {
 // SelectionDAG range assertions carry no run-time operation and must not block
 // selection of the narrowed leading-zero result.
 // CHECK-LABEL: count_leading_long:
+// CHECK:       retw
+
+// CHECK-LABEL: branch_byte:
+// CHECK:       cmpb
+// CHECK:       j{{e|ne}}
+// CHECK:       callw callee
+// CHECK:       retw
+
+// Separate call sequences must restore SP before the next call's argument
+// pushes begin.
+// CHECK-LABEL: two_calls:
+// CHECK:       callw callee
+// CHECK:       addw $4,
+// CHECK:       pushw
+// CHECK:       callw callee
+// CHECK:       addw $4,
 // CHECK:       retw

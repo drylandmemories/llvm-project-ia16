@@ -55,7 +55,16 @@ void IA16FrameLowering::emitEpilogue(MachineFunction &MF,
 }
 
 MachineBasicBlock::iterator IA16FrameLowering::eliminateCallFramePseudoInstr(
-    MachineFunction &, MachineBasicBlock &MBB,
+    MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const {
+  if (I->getOpcode() == X86::IA16_ADJCALLSTACKUP) {
+    int64_t Amount = I->getOperand(0).getImm();
+    if (Amount) {
+      const auto &TII = *MF.getSubtarget<IA16Subtarget>().getInstrInfo();
+      BuildMI(MBB, I, I->getDebugLoc(), TII.get(X86::ADD16ri), X86::SP)
+          .addReg(X86::SP)
+          .addImm(Amount);
+    }
+  }
   return MBB.erase(I);
 }

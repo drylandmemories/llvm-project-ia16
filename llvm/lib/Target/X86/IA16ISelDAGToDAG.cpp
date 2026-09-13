@@ -85,10 +85,22 @@ public:
 
     SDLoc DL(N);
     switch (N->getOpcode()) {
+    case ISD::INLINEASM:
+    case ISD::INLINEASM_BR: {
+      std::vector<SDValue> Ops(N->op_begin(), N->op_end());
+      SelectInlineAsmMemoryOperands(Ops, DL);
+      const EVT VTs[] = {MVT::Other, MVT::Glue};
+      SDValue New = CurDAG->getNode(N->getOpcode(), DL, VTs, Ops);
+      New->setNodeId(-1);
+      ReplaceUses(N, New.getNode());
+      CurDAG->RemoveDeadNode(N);
+      return;
+    }
     case ISD::EntryToken:
     case ISD::BasicBlock:
     case ISD::Register:
     case ISD::RegisterMask:
+    case ISD::MDNODE_SDNODE:
     case ISD::TargetConstant:
     case ISD::TargetGlobalAddress:
     case ISD::TargetExternalSymbol:
@@ -104,6 +116,19 @@ public:
       ReplaceUses(SDValue(N, 0), N->getOperand(0));
       CurDAG->RemoveDeadNode(N);
       return;
+    case ISD::CALLSEQ_START: {
+      SDValue Ops[] = {N->getOperand(1), N->getOperand(2), N->getOperand(0)};
+      CurDAG->SelectNodeTo(N, X86::IA16_ADJCALLSTACKDOWN, N->getVTList(), Ops);
+      return;
+    }
+    case ISD::CALLSEQ_END: {
+      SmallVector<SDValue, 4> Ops = {N->getOperand(1), N->getOperand(2),
+                                     N->getOperand(0)};
+      if (N->getNumOperands() == 4)
+        Ops.push_back(N->getOperand(3));
+      CurDAG->SelectNodeTo(N, X86::IA16_ADJCALLSTACKUP, N->getVTList(), Ops);
+      return;
+    }
     case ISD::AssertSext:
     case ISD::AssertZext:
     case ISD::AssertNoFPClass:
@@ -137,6 +162,20 @@ public:
       }
       break;
     }
+    case ISD::TRUNCATE:
+      if (N->getValueType(0) == MVT::i8 &&
+          N->getOperand(0).getValueType() == MVT::i16) {
+        SDValue RC = CurDAG->getTargetConstant(X86::IA16_GR16_ABCDRegClassID,
+                                               DL, MVT::i32);
+        SDValue Copy(CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS, DL,
+                                            MVT::i16, N->getOperand(0), RC),
+                     0);
+        SDValue Extract =
+            CurDAG->getTargetExtractSubreg(X86::sub_8bit, DL, MVT::i8, Copy);
+        ReplaceNode(N, Extract.getNode());
+        return;
+      }
+      break;
     case ISD::ZERO_EXTEND:
       if (N->getValueType(0) == MVT::i16 &&
           N->getOperand(0).getValueType() == MVT::i8) {
@@ -303,11 +342,12 @@ public:
         break;
       SDValue LHS = N->getOperand(2);
       SDValue RHS = N->getOperand(3);
-      if (LHS.getValueType() != MVT::i16 || RHS.getValueType() != MVT::i16)
+      EVT VT = LHS.getValueType();
+      if ((VT != MVT::i8 && VT != MVT::i16) || RHS.getValueType() != VT)
         break;
 
-      SDNode *Cmp =
-          CurDAG->getMachineNode(X86::CMP16rr, DL, MVT::Glue, LHS, RHS);
+      unsigned CmpOpcode = VT == MVT::i8 ? X86::CMP8rr : X86::CMP16rr;
+      SDNode *Cmp = CurDAG->getMachineNode(CmpOpcode, DL, MVT::Glue, LHS, RHS);
       SDValue Ops[] = {
           N->getOperand(4),
           CurDAG->getTargetConstant(*CC, DL, MVT::i8),

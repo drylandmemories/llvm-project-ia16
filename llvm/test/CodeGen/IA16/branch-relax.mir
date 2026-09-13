@@ -1,0 +1,35 @@
+# RUN: llc -mtriple=ia16-unknown-none-elf -mcpu=i8086 \
+# RUN:   -run-pass=branch-relaxation -verify-machineinstrs -simplify-mir \
+# RUN:   -o - %s | FileCheck %s
+
+# An 8086 has no near conditional branch. Invert an out-of-range short
+# condition and jump over a genuine 16-bit near JMP, rather than selecting the
+# 80386 0F 8x form.
+
+--- |
+  define void @long_conditional_branch() {
+    ret void
+  }
+...
+---
+name: long_conditional_branch
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: long_conditional_branch
+  ; CHECK: JCC_1 %bb.1, 5, implicit $eflags
+  ; CHECK-NEXT: JMP_2 %bb.2
+  ; CHECK: bb.1:
+  ; CHECK: INLINEASM &".space 256", 1
+  ; CHECK: bb.2:
+  ; CHECK: RET16
+  bb.0:
+    successors: %bb.2, %bb.1
+    JCC_1 %bb.2, 4, implicit undef $eflags
+
+  bb.1:
+    successors: %bb.2
+    INLINEASM &".space 256", 1
+
+  bb.2:
+    RET16
+...
