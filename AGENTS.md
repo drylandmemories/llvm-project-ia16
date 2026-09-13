@@ -11,6 +11,7 @@
 - Start from an owned clean worktree and full commit. Read `agent-state/{PROJECT.md,CURRENT.md}` and initialize with the immutable package pinned by `task-system.json`.
 - Give the task only its capsule path. It reads `startup.md` fully and validates before work. Keep capsules outside the checkout.
 - No permanent managers, standing teams, recursive delegation, or dependency on old conversations. Finish with durable state and a compact handoff, then retire.
+- A bounded capsule limits the current task's writes; it does not erase a broader, still-valid user instruction to advance this roadmap through sequential disposable tasks. Before ending, distinguish terminal completion from a required successor, preserve the exact continuation authority in that successor's capsule, and complete the project handoff protocol in `agent-state/SERIAL_WORKFLOW.md`.
 - The project-local adoption owner is `.codex/agents/disposable-task-adoption-owner.toml`. Invoke it only for a bounded migration or repair of this project's task-management layer.
 - Consume the pinned shared Feature/Bug skill and capsule tooling; never copy, fork, vendor, or recreate it here.
 - Read `.codex/DISPOSABLE_TASK_MANAGER_ADOPTION.md` before changing this local integration.

@@ -18,7 +18,10 @@ not weaken any Gate 1–5 acceptance requirement.
    absorb, reset, reformat, stage, or commit it.
 3. Admit one bounded outcome with explicit acceptance layer, fixture,
    authorization, observable finish, exclusions, and stop condition. Keep the
-   original assignment complete.
+   original assignment complete. Separate authority for this task's product
+   writes from still-valid authority to dispatch the next bounded task. A
+   narrow capsule does not cancel an explicit user instruction to progress
+   through sequential roadmap outcomes.
 4. Initialize its capsule under
    `/Users/tedbullock/Developer/llvm-ia16-tasks` from the clean exact source
    using the immutable package pinned in `task-system.json`. Read `startup.md`
@@ -77,12 +80,42 @@ not weaken any Gate 1–5 acceptance requirement.
    only after semantic review, with an exact one-step revision increment and
    the capsule's guarded state operation. Commit/read back through repository
    policy and reconcile the shared ledger when required.
-5. Leave a compact handoff with outcome, exact commits/paths, checks, retained
-   resources, unresolved blocker, and next safe action. Verify clean custody,
-   then perform the single read-only successor custody overlap above and
-   retire. Every final outcome reports its gate, progress against the roadmap,
-   evidence at each actual layer, unresolved blocker, and exact successor.
-   No later task may depend on conversation history.
+5. Decide product disposition and retirement separately. `Next-Outcome` is a
+   factual route, not authority. Re-read the current task's unchanged original
+   assignment and any capsule-attached continuation authority. If Ted directed
+   the project to advance through sequential bounded outcomes and that
+   authority still covers the recorded next outcome, do not invent an
+   `AWAITING TED` stop merely because the just-finished capsule was narrower.
+   Carry the exact authority source and conditions into the successor capsule.
+   If authority truly does not cover continuation, keep the completed task
+   visible and resumable as awaiting-user; do not claim retirement.
+6. Leave a compact handoff with outcome, exact commits/paths, checks, retained
+   resources, unresolved blocker, and next safe action. Before dispatch, stop
+   every checkout/build/test/emulator writer and require clean exact committed
+   custody. Create exactly one successor and bind its capsule digest and a
+   dispatch nonce to the returned task or client identity. Native creation is
+   not idempotent: inspect uncertain delivery and never blindly create another.
+7. The successor starts product-read-only. It validates capsule, source,
+   CURRENT/ledger, locks, journals, dirt and processes, then records immutable
+   capsule-local `READY.json`. The predecessor rechecks the freeze and records
+   immutable `RELEASED.json`; release is irreversible after interruption. The
+   successor repeats the checks and records immutable `ACKNOWLEDGED.json`.
+   Only acknowledgement permits successor product writes and predecessor
+   retirement. Each receipt binds transition/stage/time/actor, task and capsule
+   identities/digests, dispatch nonce and returned identity, repository/source,
+   CURRENT/package, authority, observed processes/state and write permission.
+   The pinned CLI does not mechanically enforce these sidecars.
+8. Every final outcome reports its gate, roadmap progress, evidence at each
+   actual layer, unresolved blocker, exact successor and receipt disposition.
+   Missing applicable receipt stages block only a `RETIRED` claim, not a
+   truthful completed/held/blocked/awaiting-user report. Natural terminal
+   completion with no authorized continuation needs no successor. No later
+   task may depend on conversation history.
+
+Routine clean transfer is checklist work suitable for a calibrated lighter
+model. Escalate reasoning for ambiguous authority, uncertain/duplicate
+dispatch, custody or state/process mismatch, and post-release recovery; do not
+add a permanent high-reasoning manager.
 
 ## Dependency order
 
