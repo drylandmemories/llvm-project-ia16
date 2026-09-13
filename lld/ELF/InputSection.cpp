@@ -1169,8 +1169,14 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
     // sections.
     if (LLVM_LIKELY(expr == R_ABS) || expr == R_DTPREL || expr == R_GOTPLTREL ||
         expr == RE_RISCV_ADD || expr == RE_ARM_SBREL) {
-      target.relocateNoSym(bufLoc, type,
-                           SignExtend64<bits>(sym.getVA(ctx, addend)));
+      const uint64_t value = SignExtend64<bits>(sym.getVA(ctx, addend));
+      // R_386_SUB16 needs the current implicit addend, which may be the value
+      // written by a preceding same-offset REL relocation.
+      if (emachine == EM_386 && type == R_386_SUB16)
+        target.relocate(bufLoc, Relocation{expr, type, offset, addend, &sym},
+                        value);
+      else
+        target.relocateNoSym(bufLoc, type, value);
       continue;
     }
 
