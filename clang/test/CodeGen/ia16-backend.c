@@ -41,6 +41,9 @@ int compare_unsigned(unsigned int left, unsigned int right) {
 }
 int compare_add(int left, int right) { return (left < right) + 7; }
 int call_indirect(int (*function)(int), int value) { return function(value); }
+unsigned int count_leading_long(unsigned long value) {
+  return __builtin_clzl(value);
+}
 
 // CHECK-LABEL: add:
 // CHECK:       pushw %bp
@@ -140,4 +143,9 @@ int call_indirect(int (*function)(int), int value) { return function(value); }
 // CHECK:       pushw
 // CHECK:       callw *%{{(ax|bx|cx|dx|si|di|bp)}}
 // CHECK:       addw $2,
+// CHECK:       retw
+
+// SelectionDAG range assertions carry no run-time operation and must not block
+// selection of the narrowed leading-zero result.
+// CHECK-LABEL: count_leading_long:
 // CHECK:       retw

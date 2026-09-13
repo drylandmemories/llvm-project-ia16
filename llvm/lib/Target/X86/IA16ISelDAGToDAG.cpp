@@ -104,6 +104,13 @@ public:
       ReplaceUses(SDValue(N, 0), N->getOperand(0));
       CurDAG->RemoveDeadNode(N);
       return;
+    case ISD::AssertSext:
+    case ISD::AssertZext:
+    case ISD::AssertNoFPClass:
+    case ISD::AssertAlign:
+      ReplaceUses(SDValue(N, 0), N->getOperand(0));
+      CurDAG->RemoveDeadNode(N);
+      return;
     case ISD::FrameIndex: {
       auto *FI = cast<FrameIndexSDNode>(N);
       SDValue Ops[] = {
