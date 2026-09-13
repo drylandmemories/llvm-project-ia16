@@ -56,11 +56,23 @@ public:
     Ty = useFirstFieldIfTransparentUnion(Ty);
 
     // Aggregates occupy an even-sized copy in the outgoing stack area.  A
-    // byval pointer is the LLVM IR representation of that copy; the IA-16
-    // call-lowering layer assigns its final SS-relative location.
+    // one- or two-word aggregate can use the same integer coercion as its
+    // register return. This exposes the complete by-value payload to the
+    // backend so ordinary call lowering places the words inline on the stack.
+    // Larger aggregates use an LLVM byval pointer; the IA-16 call-lowering
+    // layer assigns that copy's final SS-relative location.
     if (isAggregateTypeForABI(Ty)) {
-      if (getContext().getTypeSize(Ty) == 0)
+      uint64_t Size = getContext().getTypeSize(Ty);
+      if (Size == 0)
         return ABIArgInfo::getIgnore();
+      if (Size <= 16)
+        return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), 16),
+                                     0, nullptr,
+                                     /*CanBeFlattened=*/false);
+      if (Size <= 32)
+        return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), 32),
+                                     0, nullptr,
+                                     /*CanBeFlattened=*/false);
       return getNaturalAlignIndirect(Ty,
                                      getDataLayout().getAllocaAddrSpace(),
                                      /*ByVal=*/true);

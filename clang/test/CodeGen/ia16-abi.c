@@ -18,6 +18,6 @@ struct five_bytes return_five(struct five_bytes value) { return value; }
 // CHECK: define{{.*}} i32 @return_long(i32{{.*}} %value)
 // CHECK: define{{.*}} void @return_long_long(ptr{{.*}} sret(i64){{.*}}, i64{{.*}} %value)
 // CHECK: define{{.*}} void @return_float(ptr{{.*}} sret(float){{.*}}, float{{.*}} %value)
-// CHECK: define{{.*}} i16 @return_one(ptr{{.*}} byval(%struct.one_byte){{.*}} %value)
-// CHECK: define{{.*}} i32 @return_three(ptr{{.*}} byval(%struct.three_bytes){{.*}} %value)
+// CHECK: define{{.*}} i16 @return_one(i16 %value.coerce)
+// CHECK: define{{.*}} i32 @return_three(i32 %value.coerce)
 // CHECK: define{{.*}} void @return_five(ptr{{.*}} sret(%struct.five_bytes){{.*}}, ptr{{.*}} byval(%struct.five_bytes){{.*}} %value)
