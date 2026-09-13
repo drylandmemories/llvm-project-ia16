@@ -931,7 +931,9 @@ set(ia16_SOURCES
   umodsi3.c
   ia16/ashlsi3.S
   ia16/ashrsi3.S
+  ia16/divhi3.S
   ia16/lshrsi3.S
+  ia16/modhi3.S
 )
 
 add_custom_target(builtins)

@@ -325,6 +325,62 @@ public:
         return;
       }
       break;
+    case ISD::SDIV:
+    case ISD::UDIV:
+    case ISD::SREM:
+    case ISD::UREM:
+    case ISD::SDIVREM:
+    case ISD::UDIVREM:
+      if (N->getValueType(0) == MVT::i16) {
+        bool IsSigned = N->getOpcode() == ISD::SDIV ||
+                        N->getOpcode() == ISD::SREM ||
+                        N->getOpcode() == ISD::SDIVREM;
+        bool IsDivRem =
+            N->getOpcode() == ISD::SDIVREM || N->getOpcode() == ISD::UDIVREM;
+        bool WantsRemainder =
+            N->getOpcode() == ISD::SREM || N->getOpcode() == ISD::UREM;
+
+        SDValue InGlue = CurDAG
+                             ->getCopyToReg(CurDAG->getEntryNode(), DL, X86::AX,
+                                            N->getOperand(0), SDValue())
+                             .getValue(1);
+        if (IsSigned) {
+          InGlue = SDValue(
+              CurDAG->getMachineNode(X86::CWD, DL, MVT::Glue, InGlue), 0);
+        } else {
+          SDValue Zero(CurDAG->getMachineNode(
+                           X86::MOV16ri, DL, MVT::i16,
+                           CurDAG->getTargetConstant(0, DL, MVT::i16)),
+                       0);
+          InGlue = CurDAG
+                       ->getCopyToReg(CurDAG->getEntryNode(), DL, X86::DX, Zero,
+                                      InGlue)
+                       .getValue(1);
+        }
+
+        unsigned Opcode = IsSigned ? X86::IDIV16r : X86::DIV16r;
+        InGlue = SDValue(CurDAG->getMachineNode(Opcode, DL, MVT::Glue,
+                                                N->getOperand(1), InGlue),
+                         0);
+
+        auto CopyResult = [&](unsigned ResultIndex, MCRegister ResultReg) {
+          if (IsDivRem && SDValue(N, ResultIndex).use_empty())
+            return;
+          SDValue Result = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
+                                                  ResultReg, MVT::i16, InGlue);
+          InGlue = Result.getValue(2);
+          ReplaceUses(SDValue(N, ResultIndex), Result);
+        };
+        if (IsDivRem) {
+          CopyResult(0, X86::AX);
+          CopyResult(1, X86::DX);
+        } else {
+          CopyResult(0, WantsRemainder ? X86::DX : X86::AX);
+        }
+        CurDAG->RemoveDeadNode(N);
+        return;
+      }
+      break;
     case ISD::SHL:
     case ISD::SRL:
     case ISD::SRA:

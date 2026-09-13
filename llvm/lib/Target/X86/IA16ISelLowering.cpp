@@ -56,6 +56,16 @@ IA16TargetLowering::IA16TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
   setOperationAction(ISD::VACOPY, MVT::Other, Expand);
 
+  // The 8086 and 8088 raise divide error when signed IDIV would produce the
+  // representable quotient INT16_MIN. Route signed word division through
+  // compiler-rt on those CPUs; the helper guards that case before using IDIV.
+  // The 80186 and later implement the full signed 16-bit quotient range.
+  if (STI.is8086()) {
+    setOperationAction(ISD::SDIV, MVT::i16, LibCall);
+    setOperationAction(ISD::SREM, MVT::i16, LibCall);
+    setOperationAction(ISD::SDIVREM, MVT::i16, Expand);
+  }
+
   // These will become compiler-rt libcalls.  Keeping them explicitly out of
   // the legal set prevents accidental selection of post-286 instructions.
   for (MVT VT : {MVT::i8, MVT::i16}) {
