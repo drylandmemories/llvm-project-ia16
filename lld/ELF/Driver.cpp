@@ -80,6 +80,34 @@ using namespace lld::elf;
 static void setConfigs(Ctx &ctx, opt::InputArgList &args);
 static void readConfigs(Ctx &ctx, opt::InputArgList &args);
 
+template <class RelTy>
+static bool validateRelocationFields(Ctx &ctx, InputSectionBase &sec,
+                                     Relocs<RelTy> rels) {
+  bool valid = true;
+  for (const RelTy &rel : rels)
+    valid &= ctx.target->validateRelocation(
+        sec, rel.getType(ctx.arg.isMips64EL), rel.r_offset);
+  return valid;
+}
+
+template <class ELFT> static bool validateRelocationFields(Ctx &ctx) {
+  bool valid = true;
+  for (ELFFileBase *file : ctx.objectFiles) {
+    for (InputSectionBase *sec : file->getSections()) {
+      if (!sec || sec == &InputSection::discarded || sec->relSecIdx == 0)
+        continue;
+      const RelsOrRelas<ELFT> rels = sec->relsOrRelas<ELFT>();
+      if (rels.areRelocsCrel())
+        valid &= validateRelocationFields(ctx, *sec, rels.crels);
+      else if (rels.areRelocsRel())
+        valid &= validateRelocationFields(ctx, *sec, rels.rels);
+      else
+        valid &= validateRelocationFields(ctx, *sec, rels.relas);
+    }
+  }
+  return valid;
+}
+
 ELFSyncStream elf::Log(Ctx &ctx) { return {ctx, DiagLevel::Log}; }
 ELFSyncStream elf::Msg(Ctx &ctx) { return {ctx, DiagLevel::Msg}; }
 ELFSyncStream elf::Warn(Ctx &ctx) { return {ctx, DiagLevel::Warn}; }
@@ -3463,6 +3491,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // relocations or writing a PLT section. It also contains target-dependent
   // values such as a default image base address.
   setTarget(ctx);
+
+  // Reject malformed target fields before garbage collection, .eh_frame
+  // processing, relocation scanning, or relocatable-output copying can access
+  // their implicit addends or output locations.
+  if (ctx.target->needsRelocationFieldValidation() &&
+      !validateRelocationFields<ELFT>(ctx))
+    return;
 
   ctx.arg.eflags = ctx.target->calcEFlags();
   // maxPageSize (sometimes called abi page size) is the maximum page size that

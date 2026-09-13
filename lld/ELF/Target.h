@@ -41,6 +41,7 @@ public:
   virtual void writeIgotPlt(uint8_t *buf, const Symbol &s) const {}
   virtual int64_t getImplicitAddend(const uint8_t *buf, RelType type) const;
   // Give targets a chance to reject malformed fields before reading or writing.
+  virtual bool needsRelocationFieldValidation() const { return false; }
   virtual bool validateRelocation(InputSectionBase &, RelType, uint64_t) const {
     return true;
   }

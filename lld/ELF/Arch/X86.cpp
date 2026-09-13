@@ -26,6 +26,7 @@ public:
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
+  bool needsRelocationFieldValidation() const override { return true; }
   bool validateRelocation(InputSectionBase &sec, RelType type,
                           uint64_t offset) const override;
   void writeGotPltHeader(uint8_t *buf) const override;
@@ -317,9 +318,10 @@ bool X86::validateRelocation(InputSectionBase &sec, RelType type,
   if (offset <= sectionSize && fieldSize <= available)
     return true;
 
-  Err(ctx) << sec.getLocation(offset) << ": relocation " << type
-           << " requires a " << fieldSize << "-byte field, but the section has "
-           << available << " bytes available";
+  ErrAlways(ctx) << sec.getLocation(offset) << ": relocation " << type
+                 << " requires a " << fieldSize
+                 << "-byte field, but the section has " << available
+                 << " bytes available";
   return false;
 }
 

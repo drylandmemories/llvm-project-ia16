@@ -1346,8 +1346,6 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
 
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     auto type = it->getType(false);
-    if (!validateRelocation(sec, type, it->r_offset))
-      continue;
     rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
   }
 
