@@ -293,6 +293,14 @@ int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  if (rel.type == R_386_SEG16 &&
+      ctx.ia16OutputProtectedMode.value_or(false)) {
+    Err(ctx) << getErrorLoc(ctx, loc)
+             << "relocation R_386_SEG16 is invalid in IA-16 protected-mode "
+                "output";
+    return;
+  }
+
   switch (rel.type) {
   case R_386_8:
     // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
@@ -523,13 +531,6 @@ void X86::relocateAlloc(InputSection &sec, uint8_t *buf) const {
   for (size_t i = 0; i != relocs.size(); ++i) {
     const Relocation &rel = relocs[i];
     uint8_t *loc = buf + rel.offset;
-    if (rel.type == R_386_SEG16 &&
-        ctx.ia16OutputProtectedMode.value_or(false)) {
-      Err(ctx) << sec.getLocation(rel.offset)
-               << ": relocation R_386_SEG16 is invalid in IA-16 "
-                  "protected-mode output";
-      continue;
-    }
     const uint64_t val =
         SignExtend64(sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), 32);
 

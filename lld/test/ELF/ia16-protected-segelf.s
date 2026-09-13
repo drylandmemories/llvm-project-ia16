@@ -3,6 +3,7 @@
 # RUN: rm -rf %t && split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=i386 %t/protected.s -o %t/protected.o
 # RUN: llvm-mc -filetype=obj -triple=i386 %t/protected-empty.s -o %t/protected-empty.o
+# RUN: llvm-mc -filetype=obj -triple=i386 %t/protected-debug.s -o %t/protected-debug.o
 # RUN: llvm-mc -filetype=obj -triple=i386 %t/real.s -o %t/real.o
 # RUN: llvm-mc -filetype=obj -triple=i386 %t/real-empty.s -o %t/real-empty.o
 # RUN: llvm-mc -filetype=obj -triple=i386 %t/unmarked.s -o %t/unmarked.o
@@ -13,6 +14,12 @@
 # RUN: not ld.lld -m elf_i386 --entry=0 --defsym=target=0x12345 -o /dev/null \
 # RUN:   %t/protected.o 2>&1 | FileCheck %s --check-prefix=PROTECTED
 # PROTECTED: error: {{.*}}protected.o:(.data+0x0): relocation R_386_SEG16 is invalid in IA-16 protected-mode output
+
+## Non-allocated sections use a separate LLD relocation loop but obey the same
+## protected-mode prohibition.
+# RUN: not ld.lld -m elf_i386 --entry=0 --defsym=target=0x12345 -o /dev/null \
+# RUN:   %t/protected-debug.o 2>&1 | FileCheck %s --check-prefix=NONALLOC
+# NONALLOC: error: {{.*}}protected-debug.o:(.debug_ia16+0x0): relocation R_386_SEG16 is invalid in IA-16 protected-mode output
 
 ## An unmarked handwritten relocation is also rejected when another input
 ## establishes that the output is protected mode.
@@ -67,6 +74,21 @@
 .p2align 2
 .asciz "IA16-MODE:protected"
 .p2align 2
+
+#--- protected-debug.s
+.section .note.ia16.mode,"",@note
+.p2align 2
+.long 5
+.long 20
+.long 2
+.asciz "IA16"
+.p2align 2
+.asciz "IA16-MODE:protected"
+.p2align 2
+
+.section .debug_ia16,"",@progbits
+.short 0
+.reloc .-2, R_386_SEG16, target
 
 #--- real.s
 .section .note.ia16.mode,"",@note
