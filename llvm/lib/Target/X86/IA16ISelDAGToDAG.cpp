@@ -97,6 +97,13 @@ public:
     case ISD::TokenFactor:
       N->setNodeId(-1);
       return;
+    case ISD::LIFETIME_START:
+    case ISD::LIFETIME_END:
+      // Lifetime markers are optimization hints. Dropping them avoids turning
+      // their frame-index operand into an address-producing LEA.
+      ReplaceUses(SDValue(N, 0), N->getOperand(0));
+      CurDAG->RemoveDeadNode(N);
+      return;
     case ISD::FrameIndex: {
       auto *FI = cast<FrameIndexSDNode>(N);
       SDValue Ops[] = {

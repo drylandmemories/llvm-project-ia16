@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "IA16ISelLowering.h"
+#include "IA16MachineFunctionInfo.h"
 #include "IA16Subtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -46,7 +47,7 @@ IA16TargetLowering::IA16TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i16, Expand);
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
-  setOperationAction(ISD::VASTART, MVT::Other, Expand);
+  setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction(ISD::VAARG, MVT::Other, Expand);
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
   setOperationAction(ISD::VACOPY, MVT::Other, Expand);
@@ -67,6 +68,20 @@ const char *IA16TargetLowering::getTargetNodeName(unsigned Opcode) const {
   default:
     return nullptr;
   }
+}
+
+SDValue IA16TargetLowering::LowerOperation(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  if (Op.getOpcode() != ISD::VASTART)
+    report_fatal_error("unexpected custom IA-16 DAG operation");
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  const auto *FuncInfo = MF.getInfo<IA16MachineFunctionInfo>();
+  SDValue FrameIndex = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(),
+                                         getPointerTy(DAG.getDataLayout()));
+  const Value *SrcValue = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
+  return DAG.getStore(Op.getOperand(0), SDLoc(Op), FrameIndex,
+                      Op.getOperand(1), MachinePointerInfo(SrcValue));
 }
 
 MachineBasicBlock *IA16TargetLowering::EmitInstrWithCustomInserter(
@@ -133,10 +148,8 @@ SDValue IA16TargetLowering::LowerFormalArguments(
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   if (CallConv != CallingConv::C)
     report_fatal_error("unsupported IA-16 calling convention");
-  if (IsVarArg)
-    report_fatal_error("IA-16 variadic argument lowering is not implemented");
-
-  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   int64_t Offset = 2; // Near return IP occupies the first entry-stack word.
   for (const ISD::InputArg &Arg : Ins) {
     EVT VT = Arg.VT;
@@ -151,12 +164,16 @@ SDValue IA16TargetLowering::LowerFormalArguments(
     InVals.push_back(Value);
     Offset += 2;
   }
+  if (IsVarArg) {
+    int FI = MFI.CreateFixedObject(2, Offset, true);
+    MF.getInfo<IA16MachineFunctionInfo>()->setVarArgsFrameIndex(FI);
+  }
   return Chain;
 }
 
 SDValue IA16TargetLowering::LowerCall(
     CallLoweringInfo &CLI, SmallVectorImpl<SDValue> &InVals) const {
-  if (CLI.CallConv != CallingConv::C || CLI.IsVarArg)
+  if (CLI.CallConv != CallingConv::C)
     report_fatal_error("unsupported IA-16 call convention");
   CLI.IsTailCall = false;
 

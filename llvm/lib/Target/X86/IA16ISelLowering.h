@@ -39,6 +39,7 @@ public:
                               MachineBasicBlock *MBB) const override;
 
 private:
+  SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   SDValue LowerFormalArguments(
       SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
       const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,

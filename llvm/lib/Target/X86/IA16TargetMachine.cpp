@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "IA16TargetMachine.h"
+#include "IA16MachineFunctionInfo.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -47,6 +48,13 @@ IA16TargetMachine::IA16TargetMachine(
 }
 
 IA16TargetMachine::~IA16TargetMachine() = default;
+
+MachineFunctionInfo *IA16TargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return IA16MachineFunctionInfo::create<IA16MachineFunctionInfo>(Allocator, F,
+                                                                  STI);
+}
 
 namespace {
 class IA16PassConfig final : public TargetPassConfig {
