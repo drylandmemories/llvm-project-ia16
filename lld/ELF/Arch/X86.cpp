@@ -552,8 +552,11 @@ void X86::relocateAlloc(InputSection &sec, uint8_t *buf) const {
       continue;
     }
     if (rel.type == R_386_SUB32 && continuesExpression) {
-      const uint64_t symbolValue = val - rel.addend;
-      write32le(loc, read32le(loc) - symbolValue);
+      const int64_t cumulativeAddend = SignExtend64(read32le(loc), 32);
+      const int64_t symbolValue = static_cast<uint32_t>(val - rel.addend);
+      const int64_t result = cumulativeAddend - symbolValue;
+      checkInt(ctx, loc, result, 32, rel);
+      write32le(loc, result);
       continue;
     }
 
