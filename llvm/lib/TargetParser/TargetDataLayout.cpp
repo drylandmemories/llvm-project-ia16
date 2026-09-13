@@ -581,6 +581,14 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
     return computeMipsDataLayout(*this, ABIName);
   case Triple::msp430:
     return "e-m:e-p:16:16-i32:16-i64:16-f32:16-f64:16-a:8-n8:16-S16";
+  case Triple::ia16:
+    // Address spaces are part of the IA-16 ABI: 0 near data, 1 far data,
+    // 2 huge data, 3 SS-relative data, 4 near code, and 5 far code. Far
+    // pointers have 32-bit representations but 16-bit indexes; huge pointers
+    // retain a 32-bit index so arithmetic can cross real-mode segments.
+    return "e-m:e-p:16:16-p1:32:16:16:16-p2:32:16:16:32-"
+           "p3:16:16-p4:16:16-p5:32:16:16:16-i32:16-i64:16-"
+           "f32:16-f64:16-a:0:16-n8:16-S16";
   case Triple::ppc:
   case Triple::ppcle:
   case Triple::ppc64:

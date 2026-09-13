@@ -78,6 +78,20 @@ TEST(TripleTest, BasicParsing) {
 TEST(TripleTest, ParsedIDs) {
   Triple T;
 
+  T = Triple("ia16-pc-dos-elf");
+  EXPECT_EQ(Triple::ia16, T.getArch());
+  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::DOS, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+  EXPECT_EQ(Triple::ELF, T.getObjectFormat());
+  EXPECT_TRUE(T.isOSDOS());
+
+  T = Triple("ia16-unknown-none-elf");
+  EXPECT_EQ(Triple::ia16, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+  EXPECT_EQ(Triple::ELF, T.getObjectFormat());
+
   T = Triple("i386-apple-darwin");
   EXPECT_EQ(Triple::x86, T.getArch());
   EXPECT_EQ(Triple::Apple, T.getVendor());
@@ -1823,6 +1837,12 @@ TEST(TripleTest, BitWidthChecks) {
   EXPECT_FALSE(T.isArch64Bit());
   EXPECT_EQ(T.getArchPointerBitWidth(), 16U);
 
+  T.setArch(Triple::ia16);
+  EXPECT_TRUE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 16U);
+
   T.setArch(Triple::ppc);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
@@ -2753,6 +2773,10 @@ TEST(TripleTest, CheckValidOSVersion) {
 }
 
 TEST(TripleTest, FileFormat) {
+  EXPECT_EQ(Triple::ELF, Triple("ia16-unknown-none-elf").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("ia16-pc-dos-elf").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("ia16-pc-dos").getObjectFormat());
+
   EXPECT_EQ(Triple::ELF, Triple("i686-unknown-linux-gnu").getObjectFormat());
   EXPECT_EQ(Triple::ELF, Triple("i686-unknown-freebsd").getObjectFormat());
   EXPECT_EQ(Triple::ELF, Triple("i686-unknown-netbsd").getObjectFormat());
@@ -3366,6 +3390,15 @@ TEST(DataLayoutTest, UEFI) {
 
   // Test UEFI X86_64 Mangling Component.
   EXPECT_THAT(TT.computeDataLayout(), testing::HasSubstr("-m:w-"));
+}
+
+TEST(DataLayoutTest, IA16SegmentedPointers) {
+  Triple TT("ia16-pc-dos-elf");
+
+  EXPECT_EQ("e-m:e-p:16:16-p1:32:16:16:16-p2:32:16:16:32-"
+            "p3:16:16-p4:16:16-p5:32:16:16:16-i32:16-i64:16-"
+            "f32:16-f64:16-a:0:16-n8:16-S16",
+            TT.computeDataLayout());
 }
 
 } // end anonymous namespace

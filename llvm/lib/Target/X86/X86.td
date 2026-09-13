@@ -1663,6 +1663,16 @@ def : ProcModel<"generic", SandyBridgeModel,
                  TuningFast15ByteNOP,
                  TuningInsertVZEROUPPER]>;
 
+// IA-16 processor names are registered here so the shared X86 MC layer can
+// assemble for the distinct ia16 target. Instruction-generation validation is
+// performed by the IA-16 assembler policy and does not inherit i386 features.
+foreach P = ["i8086", "i8088"] in
+  def : Proc<P, [], []>;
+foreach P = ["i80186", "i186", "i80188"] in
+  def : Proc<P, [], []>;
+foreach P = ["i80286", "i286"] in
+  def : Proc<P, [], []>;
+
 def : Proc<"i386",            [FeatureX87],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 def : Proc<"i486",            [FeatureX87],

@@ -1577,6 +1577,10 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
     AddSystemZTargetArgs(Args, CmdArgs);
     break;
 
+  case llvm::Triple::ia16:
+    AddIA16TargetArgs(Args, CmdArgs);
+    break;
+
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     AddX86TargetArgs(Args, CmdArgs);
@@ -2214,6 +2218,22 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
   if (!TuneCPU.empty()) {
     CmdArgs.push_back("-tune-cpu");
     CmdArgs.push_back(Args.MakeArgString(TuneCPU));
+  }
+}
+
+void Clang::AddIA16TargetArgs(const ArgList &Args,
+                              ArgStringList &CmdArgs) const {
+  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
+    CmdArgs.push_back("-tune-cpu");
+    CmdArgs.push_back(Args.MakeArgString(A->getValue()));
+  }
+
+  if (const Arg *A = Args.getLastArg(options::OPT_mprotected_mode,
+                                     options::OPT_mreal_mode)) {
+    CmdArgs.push_back("-target-feature");
+    CmdArgs.push_back(A->getOption().matches(options::OPT_mprotected_mode)
+                          ? "+protected-mode"
+                          : "-protected-mode");
   }
 }
 

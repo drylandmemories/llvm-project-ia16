@@ -223,6 +223,9 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
   case llvm::Triple::msp430:
     return createMSP430TargetCodeGenInfo(CGM);
 
+  case llvm::Triple::ia16:
+    return createIA16TargetCodeGenInfo(CGM);
+
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64: {
     StringRef ABIStr = Target.getABI();
@@ -1474,12 +1477,24 @@ void CodeGenModule::Release() {
   }
 
   if (getCodeGenOpts().CodeModel.size() > 0) {
+    if (getTriple().getArch() == llvm::Triple::ia16) {
+      StringRef IA16Model = getCodeGenOpts().CodeModel;
+      if (IA16Model.empty() || IA16Model == "default")
+        IA16Model = "small";
+      getModule().addModuleFlag(llvm::Module::Error, "ia16-memory-model",
+                                llvm::MDString::get(getLLVMContext(), IA16Model));
+      getModule().addModuleFlag(
+          llvm::Module::Error, "ia16-protected-mode",
+          Context.getTargetInfo().hasFeature("protected-mode") ? 1 : 0);
+    }
     unsigned CM = llvm::StringSwitch<unsigned>(getCodeGenOpts().CodeModel)
                   .Case("tiny", llvm::CodeModel::Tiny)
                   .Case("small", llvm::CodeModel::Small)
                   .Case("kernel", llvm::CodeModel::Kernel)
                   .Case("medium", llvm::CodeModel::Medium)
+                  .Case("compact", llvm::CodeModel::Small)
                   .Case("large", llvm::CodeModel::Large)
+                  .Case("huge", llvm::CodeModel::Large)
                   .Default(~0u);
     if (CM != ~0u) {
       llvm::CodeModel::Model codeModel = static_cast<llvm::CodeModel::Model>(CM);

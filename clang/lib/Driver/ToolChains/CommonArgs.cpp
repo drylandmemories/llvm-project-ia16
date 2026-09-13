@@ -751,6 +751,11 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   case llvm::Triple::m68k:
     return m68k::getM68kTargetCPU(Args);
 
+  case llvm::Triple::ia16:
+    if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
+      return A->getValue();
+    return "i8086";
+
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
@@ -3175,6 +3180,9 @@ void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
         CM = "medium";
       Ok = CM == "small" || CM == "medium" ||
            (CM == "large" && Triple.isRISCV64());
+    } else if (Triple.getArch() == llvm::Triple::ia16) {
+      Ok = llvm::is_contained(
+          {"tiny", "small", "medium", "compact", "large", "huge"}, CM);
     } else if (Triple.getArch() == llvm::Triple::x86_64) {
       Ok = llvm::is_contained({"small", "kernel", "medium", "large"}, CM);
     } else if (Triple.isNVPTX() || Triple.isAMDGPU() || Triple.isSPIRV()) {

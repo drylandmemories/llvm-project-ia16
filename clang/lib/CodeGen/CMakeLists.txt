@@ -139,6 +139,7 @@ add_clang_library(clangCodeGen
   Targets/CSKY.cpp
   Targets/DirectX.cpp
   Targets/Hexagon.cpp
+  Targets/IA16.cpp
   Targets/Lanai.cpp
   Targets/LoongArch.cpp
   Targets/M68k.cpp

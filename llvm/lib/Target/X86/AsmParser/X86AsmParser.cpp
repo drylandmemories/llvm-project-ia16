@@ -42,6 +42,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/IA16TargetParser.h"
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -3959,11 +3960,160 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
   }
 }
 
+static bool isIA16Register(MCRegister Reg) {
+  switch (Reg.id()) {
+  case X86::NoRegister:
+  case X86::AL:
+  case X86::AH:
+  case X86::BL:
+  case X86::BH:
+  case X86::CL:
+  case X86::CH:
+  case X86::DL:
+  case X86::DH:
+  case X86::AX:
+  case X86::BX:
+  case X86::CX:
+  case X86::DX:
+  case X86::SI:
+  case X86::DI:
+  case X86::BP:
+  case X86::SP:
+  case X86::CS:
+  case X86::DS:
+  case X86::ES:
+  case X86::SS:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isIA16BaseMnemonic(StringRef Mnemonic) {
+  return StringSwitch<bool>(Mnemonic)
+      .Cases({"aaa", "aad", "aam", "aas", "adc"}, true)
+      .Cases({"add", "and", "call", "lcall", "cbw"}, true)
+      .Cases({"clc", "cld", "cli", "cmc", "cmp"}, true)
+      .Cases({"cmps", "cmpsb", "cmpsw", "cwd", "daa"}, true)
+      .Cases({"das", "dec", "div", "hlt", "idiv"}, true)
+      .Cases({"imul", "in", "inc", "int", "int3"}, true)
+      .Cases({"into", "iret", "ja", "jae", "jb"}, true)
+      .Cases({"jbe", "jc", "jcxz", "je", "jg"}, true)
+      .Cases({"jge", "jl", "jle", "jmp", "ljmp"}, true)
+      .Cases({"jna", "jnae", "jnb", "jnbe", "jnc"}, true)
+      .Cases({"jne", "jng", "jnge", "jnl", "jnle"}, true)
+      .Cases({"jno", "jnp", "jns", "jnz", "jo"}, true)
+      .Cases({"jp", "jpe", "jpo", "js", "jz"}, true)
+      .Cases({"lahf", "lds", "lea", "les", "lods"}, true)
+      .Cases({"lodsb", "lodsw", "loop", "loope", "loopne"}, true)
+      .Cases({"loopnz", "loopz", "mov", "movs", "movsb"}, true)
+      .Cases({"movsw", "mul", "neg", "nop", "not"}, true)
+      .Cases({"or", "out", "pop", "popf", "push"}, true)
+      .Cases({"pushf", "rcl", "rcr", "ret", "retf"}, true)
+      .Cases({"lret", "rol", "ror", "sahf", "sal"}, true)
+      .Cases({"sar", "sbb", "scas", "scasb", "scasw"}, true)
+      .Cases({"shl", "shr", "stc", "std", "sti"}, true)
+      .Cases({"stos", "stosb", "stosw", "sub", "test"}, true)
+      .Cases({"wait", "fwait", "xchg", "xlat", "xlatb"}, true)
+      .Case("xor", true)
+      .Default(false);
+}
+
+static bool isIA16186Mnemonic(StringRef Mnemonic) {
+  return StringSwitch<bool>(Mnemonic)
+      .Cases({"bound", "enter", "ins", "insb", "insw"}, true)
+      .Cases({"leave", "outs", "outsb", "outsw", "popa"}, true)
+      .Case("pusha", true)
+      .Default(false);
+}
+
+static bool isIA16286Mnemonic(StringRef Mnemonic) {
+  return StringSwitch<bool>(Mnemonic)
+      .Cases({"arpl", "clts", "lar", "lgdt", "lidt"}, true)
+      .Cases({"lldt", "lmsw", "lsl", "ltr", "sgdt"}, true)
+      .Cases({"sidt", "sldt", "smsw", "str", "verr"}, true)
+      .Case("verw", true)
+      .Default(false);
+}
+
 bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
   using namespace X86;
   const MCRegisterInfo *MRI = getContext().getRegisterInfo();
   unsigned Opcode = Inst.getOpcode();
   uint64_t TSFlags = MII.get(Opcode).TSFlags;
+
+  if (getSTI().getTargetTriple().getArch() == Triple::ia16) {
+    IA16::CPUKind CPU = IA16::parseCPU(getSTI().getCPU());
+    if (CPU == IA16::CPUKind::Invalid)
+      return Error(Ops[0]->getStartLoc(),
+                   "invalid CPU for IA-16; expected i8086, i8088, i80186, "
+                   "i80188, or i80286");
+
+    const auto &MnemonicOperand = static_cast<const X86Operand &>(*Ops[0]);
+    StringRef Mnemonic = MnemonicOperand.getToken();
+    uint32_t Features = IA16::getCPUFeatures(CPU);
+    auto IsAllowedMnemonic = [&](StringRef Name) {
+      return isIA16BaseMnemonic(Name) ||
+             ((Features & IA16::FeatureShiftImmediate) &&
+              isIA16186Mnemonic(Name)) ||
+             ((Features & IA16::FeatureProtectedMode) &&
+              isIA16286Mnemonic(Name));
+    };
+    bool Allowed = IsAllowedMnemonic(Mnemonic);
+    if (!Allowed && (Mnemonic.ends_with("b") || Mnemonic.ends_with("w")) &&
+        IsAllowedMnemonic(Mnemonic.drop_back())) {
+      Mnemonic = Mnemonic.drop_back();
+      Allowed = true;
+    }
+    if (!Allowed)
+      return Error(Ops[0]->getStartLoc(),
+                   "instruction is not available on the selected IA-16 CPU");
+
+    StringRef OpcodeName = MII.getName(Opcode);
+    if (OpcodeName.contains("32") || OpcodeName.contains("64"))
+      return Error(Ops[0]->getStartLoc(),
+                   "32-bit and 64-bit encodings are not available on IA-16");
+    if (OpcodeName.starts_with("JCC_") && Opcode != X86::JCC_1)
+      return Error(Ops[0]->getStartLoc(),
+                   "near conditional branches require an 80386 or later");
+
+    for (const MCOperand &Operand : Inst)
+      if (Operand.isReg() && !isIA16Register(Operand.getReg()))
+        return Error(Ops[0]->getStartLoc(),
+                     "register is not available on IA-16");
+
+    bool HasImmediate = false;
+    int64_t Immediate = 0;
+    for (const auto &Operand : Ops) {
+      const auto &X86Op = static_cast<const X86Operand &>(*Operand);
+      if (X86Op.isImm()) {
+        if (const auto *CE = dyn_cast<MCConstantExpr>(X86Op.getImm())) {
+          HasImmediate = true;
+          Immediate = CE->getValue();
+        }
+      }
+    }
+
+    if (!(Features & IA16::FeaturePushImmediate) && Mnemonic == "push" &&
+        HasImmediate)
+      return Error(Ops[0]->getStartLoc(),
+                   "immediate push requires an 80186 or later");
+    if (!(Features & IA16::FeatureIMulImmediate) && Mnemonic == "imul" &&
+        HasImmediate)
+      return Error(Ops[0]->getStartLoc(),
+                   "immediate imul requires an 80186 or later");
+    if (Mnemonic == "imul" && !HasImmediate && Ops.size() > 2)
+      return Error(Ops[0]->getStartLoc(),
+                   "two-register imul requires an 80386 or later");
+    if (!(Features & IA16::FeatureShiftImmediate) &&
+        StringSwitch<bool>(Mnemonic)
+            .Cases({"rcl", "rcr", "rol", "ror", "sal"}, true)
+            .Cases({"sar", "shl", "shr"}, true)
+            .Default(false) &&
+        HasImmediate && Immediate != 1)
+      return Error(Ops[0]->getStartLoc(),
+                   "multi-bit immediate shift requires an 80186 or later");
+  }
   if (isVFCMADDCPH(Opcode) || isVFCMADDCSH(Opcode) || isVFMADDCPH(Opcode) ||
       isVFMADDCSH(Opcode)) {
     MCRegister Dest = Inst.getOperand(0).getReg();
@@ -5131,6 +5281,7 @@ bool X86AsmParser::parseDirectiveSEHPushFrame(SMLoc Loc) {
 
 // Force static initialization.
 extern "C" LLVM_C_ABI void LLVMInitializeX86AsmParser() {
+  RegisterMCAsmParser<X86AsmParser> IA16(getTheIA16Target());
   RegisterMCAsmParser<X86AsmParser> X(getTheX86_32Target());
   RegisterMCAsmParser<X86AsmParser> Y(getTheX86_64Target());
 }

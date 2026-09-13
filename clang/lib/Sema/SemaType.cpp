@@ -10130,6 +10130,12 @@ QualType Sema::BuildUnaryTransformType(QualType BaseType, UTTKind UKind,
 }
 
 QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
+  if (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::ia16) {
+    Diag(Loc, diag::err_atomic_unsupported)
+        << Context.getTargetInfo().getTriple().str();
+    return QualType();
+  }
+
   if (!isDependentOrGNUAutoType(T)) {
     // FIXME: It isn't entirely clear whether incomplete atomic types
     // are allowed or not; for simplicity, ban them for the moment.

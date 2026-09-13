@@ -5146,6 +5146,12 @@ def inline_asm_EQ : Joined<["-"], "inline-asm=">, Group<m_Group>,
 def mcmodel_EQ : Joined<["-"], "mcmodel=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   MarshallingInfoString<TargetOpts<"CodeModel">, [{"default"}]>;
+def mprotected_mode : Flag<["-"], "mprotected-mode">, Group<m_Group>,
+  Flags<[TargetSpecific]>, Visibility<[ClangOption]>,
+  HelpText<"Use 80286 protected-mode selector semantics">;
+def mreal_mode : Flag<["-"], "mreal-mode">, Group<m_Group>,
+  Flags<[TargetSpecific]>, Visibility<[ClangOption]>,
+  HelpText<"Use real-mode segment semantics (IA-16 default)">;
 def mlarge_data_threshold_EQ : Joined<["-"], "mlarge-data-threshold=">, Group<m_Group>,
   Flags<[TargetSpecific]>, Visibility<[ClangOption, CC1Option,FlangOption, FC1Option]>,
   MarshallingInfoInt<TargetOpts<"LargeDataThreshold">, "0">;
@@ -6056,7 +6062,7 @@ def module_file_info : Flag<["-"], "module-file-info">, Flags<[]>,
 def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>,
   Visibility<[ClangOption, FlangOption]>,
-  HelpText<"Only supported on AArch64, PowerPC, RISC-V, SPARC, SystemZ, and X86">;
+  HelpText<"Only supported on AArch64, IA-16, PowerPC, RISC-V, SPARC, SystemZ, and X86">;
 def multi_lib_config : Joined<["-", "--"], "multi-lib-config=">,
   HelpText<"Path to the YAML configuration file to be used for multilib selection">,
   MetaVarName<"<file>">;

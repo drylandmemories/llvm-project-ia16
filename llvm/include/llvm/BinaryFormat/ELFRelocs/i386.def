@@ -45,3 +45,10 @@ ELF_RELOC(R_386_TLS_DESC_CALL,  40)
 ELF_RELOC(R_386_TLS_DESC,       41)
 ELF_RELOC(R_386_IRELATIVE,      42)
 ELF_RELOC(R_386_GOT32X,         43)
+// 44 is reserved by the Intel386 psABI.
+ELF_RELOC(R_386_SEG16,          45)
+ELF_RELOC(R_386_SUB16,          46)
+ELF_RELOC(R_386_SUB32,          47)
+// 48 is R_386_SEGRELATIVE in binutils-ia16. It is deliberately not emitted
+// by the static-only IA-16 ABI.
+ELF_RELOC(R_386_HUGE8,          49)

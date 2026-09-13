@@ -296,7 +296,9 @@ getCodeModel(const CodeGenOptions &CodeGenOpts) {
                            .Case("small", llvm::CodeModel::Small)
                            .Case("kernel", llvm::CodeModel::Kernel)
                            .Case("medium", llvm::CodeModel::Medium)
+                           .Case("compact", llvm::CodeModel::Small)
                            .Case("large", llvm::CodeModel::Large)
+                           .Case("huge", llvm::CodeModel::Large)
                            .Cases({"default", ""}, ~1u)
                            .Default(~0u);
   assert(CodeModel != ~0u && "invalid code model!");

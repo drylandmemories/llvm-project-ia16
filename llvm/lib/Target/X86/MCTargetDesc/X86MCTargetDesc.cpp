@@ -29,6 +29,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/IA16TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -50,10 +51,11 @@ std::string X86_MC::ParseX86Triple(const Triple &TT) {
   // explicitly.
   if (TT.isX86_64())
     FS = "+64bit-mode,-32bit-mode,-16bit-mode,+sse2";
-  else if (TT.getEnvironment() != Triple::CODE16)
-    FS = "-64bit-mode,+32bit-mode,-16bit-mode";
-  else
+  else if (TT.getArch() == Triple::ia16 ||
+           TT.getEnvironment() == Triple::CODE16)
     FS = "-64bit-mode,-32bit-mode,+16bit-mode";
+  else
+    FS = "-64bit-mode,+32bit-mode,-16bit-mode";
 
   if (TT.isX32())
     FS += ",+x32";
@@ -398,7 +400,7 @@ MCSubtargetInfo *X86_MC::createX86MCSubtargetInfo(const Triple &TT,
     ArchFS = (Twine(ArchFS) + "," + FS).str();
 
   if (CPU.empty())
-    CPU = "generic";
+    CPU = TT.getArch() == Triple::ia16 ? IA16::getDefaultCPU() : "generic";
 
   return createX86MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, ArchFS);
 }
@@ -410,8 +412,9 @@ static MCInstrInfo *createX86MCInstrInfo() {
 }
 
 static MCRegisterInfo *createX86MCRegisterInfo(const Triple &TT) {
-  unsigned RA = TT.isX86_64() ? X86::RIP  // Should have dwarf #16.
-                              : X86::EIP; // Should have dwarf #8.
+  unsigned RA = TT.isX86_64()                  ? X86::RIP
+                : TT.getArch() == Triple::ia16 ? X86::IP
+                                               : X86::EIP;
 
   MCRegisterInfo *X = new MCRegisterInfo();
   InitX86MCRegisterInfo(X, RA, X86_MC::getDwarfRegFlavour(TT, false),
@@ -700,7 +703,8 @@ static MCInstrAnalysis *createX86MCInstrAnalysis(const MCInstrInfo *Info) {
 
 // Force static initialization.
 extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMC() {
-  for (Target *T : {&getTheX86_32Target(), &getTheX86_64Target()}) {
+  for (Target *T :
+       {&getTheIA16Target(), &getTheX86_32Target(), &getTheX86_64Target()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createX86MCAsmInfo);
 
@@ -741,6 +745,8 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMC() {
   }
 
   // Register the asm backend.
+  TargetRegistry::RegisterMCAsmBackend(getTheIA16Target(),
+                                       createX86_32AsmBackend);
   TargetRegistry::RegisterMCAsmBackend(getTheX86_32Target(),
                                        createX86_32AsmBackend);
   TargetRegistry::RegisterMCAsmBackend(getTheX86_64Target(),

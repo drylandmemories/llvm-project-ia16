@@ -80,6 +80,10 @@ RelExpr X86::getRelExpr(RelType type, const Symbol &s,
   case R_386_8:
   case R_386_16:
   case R_386_32:
+  case R_386_HUGE8:
+  case R_386_SEG16:
+  case R_386_SUB16:
+  case R_386_SUB32:
     return R_ABS;
   case R_386_TLS_LDO_32:
     return R_DTPREL;
@@ -242,9 +246,12 @@ int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_386_8:
   case R_386_PC8:
+  case R_386_HUGE8:
     return SignExtend64<8>(*buf);
   case R_386_16:
   case R_386_PC16:
+  case R_386_SEG16:
+  case R_386_SUB16:
     return SignExtend64<16>(read16le(buf));
   case R_386_32:
   case R_386_GLOB_DAT:
@@ -256,6 +263,7 @@ int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_386_PC32:
   case R_386_PLT32:
   case R_386_RELATIVE:
+  case R_386_SUB32:
   case R_386_TLS_GOTDESC:
   case R_386_TLS_DESC_CALL:
   case R_386_TLS_DTPMOD32:
@@ -297,6 +305,10 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     checkInt(ctx, loc, val, 8, rel);
     *loc = val;
     break;
+  case R_386_HUGE8:
+    // Low nibble of the normalized real-mode linear address.
+    *loc = val & 0xf;
+    break;
   case R_386_16:
     checkIntUInt(ctx, loc, val, 16, rel);
     write16le(loc, val);
@@ -314,6 +326,19 @@ void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // should have no false positives.
     checkInt(ctx, loc, val, 17, rel);
     write16le(loc, val);
+    break;
+  case R_386_SEG16:
+    // Paragraph containing the real-mode linear address.
+    write16le(loc, val >> 4);
+    break;
+  case R_386_SUB16:
+    // The standalone REL expression is A-S. Paired expressions are handled
+    // cumulatively in relocateAlloc(), where the preceding relocated value is
+    // available.
+    write16le(loc, rel.addend - (val - rel.addend));
+    break;
+  case R_386_SUB32:
+    write32le(loc, rel.addend - (val - rel.addend));
     break;
   case R_386_32:
   case R_386_GOT32:
@@ -493,10 +518,39 @@ void X86::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
 
 void X86::relocateAlloc(InputSection &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
-  for (const Relocation &rel : sec.relocs()) {
+  ArrayRef<Relocation> relocs = sec.relocs();
+  for (size_t i = 0; i != relocs.size(); ++i) {
+    const Relocation &rel = relocs[i];
     uint8_t *loc = buf + rel.offset;
     const uint64_t val =
         SignExtend64(sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), 32);
+
+    // SEGELF represents symbol differences using adjacent relocations at one
+    // offset. The second and later relocation use the result already written
+    // at the location, rather than the original implicit addend recorded for
+    // every ELF REL entry.
+    const bool continuesExpression =
+        i != 0 && relocs[i - 1].offset == rel.offset;
+    if (rel.type == R_386_SUB16 && continuesExpression) {
+      const uint64_t symbolValue = val - rel.addend;
+      write16le(loc, read16le(loc) - symbolValue);
+      continue;
+    }
+    if (rel.type == R_386_SUB32 && continuesExpression) {
+      const uint64_t symbolValue = val - rel.addend;
+      write32le(loc, read32le(loc) - symbolValue);
+      continue;
+    }
+
+    // A symbol difference can exceed 16 bits before its adjacent subtraction
+    // is applied even though the final result is representable.
+    if (rel.type == R_386_16 && i + 1 != relocs.size() &&
+        relocs[i + 1].offset == rel.offset &&
+        relocs[i + 1].type == R_386_SUB16) {
+      write16le(loc, val);
+      continue;
+    }
+
     switch (rel.expr) {
     case R_RELAX_TLS_GD_TO_IE_GOTPLT:
       relaxTlsGdToIe(loc, rel, val);

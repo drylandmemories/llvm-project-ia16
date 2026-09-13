@@ -254,6 +254,7 @@ uint16_t ELF::convertTripleArchTypeToEMachine(Triple::ArchType ArchType) {
     return EM_SPARCV9;
   case Triple::systemz:
     return EM_S390;
+  case Triple::ia16:
   case Triple::x86:
     return EM_386;
   case Triple::x86_64:

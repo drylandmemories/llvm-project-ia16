@@ -33,6 +33,7 @@ LLVM and API reference documentation.
    GwpAsan
    HowToSetUpLLVMStyleRTTI
    HowToUseAttributes
+   IA16ABI
    InAlloca
    InterfaceExportAnnotations
    LangRef
@@ -174,6 +175,10 @@ XRay
 =================
 Additional Topics
 =================
+
+:doc:`IA-16 C and Segmented ELF ABI <IA16ABI>`
+  The versioned data model, calling convention, address spaces, memory models,
+  and relocation contract for the experimental IA-16 target.
 
 :doc:`FaultMaps`
   LLVM support for folding control flow into faulting machine instructions.

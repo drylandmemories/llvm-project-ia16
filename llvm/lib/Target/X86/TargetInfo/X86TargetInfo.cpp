@@ -11,6 +11,10 @@
 #include "llvm/MC/TargetRegistry.h"
 using namespace llvm;
 
+Target &llvm::getTheIA16Target() {
+  static Target TheIA16Target;
+  return TheIA16Target;
+}
 Target &llvm::getTheX86_32Target() {
   static Target TheX86_32Target;
   return TheX86_32Target;
@@ -21,6 +25,9 @@ Target &llvm::getTheX86_64Target() {
 }
 
 extern "C" LLVM_C_ABI void LLVMInitializeX86TargetInfo() {
+  RegisterTarget<Triple::ia16, /*HasJIT=*/false> IA16(
+      getTheIA16Target(), "ia16", "16-bit Intel 8086 through 80286", "X86");
+
   RegisterTarget<Triple::x86, /*HasJIT=*/true> X(
       getTheX86_32Target(), "x86", "32-bit X86: Pentium-Pro and above", "X86");
 

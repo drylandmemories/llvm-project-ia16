@@ -87,6 +87,7 @@ public:
     tcele,       // TCE little endian (http://tce.cs.tut.fi/): tcele
     thumb,       // Thumb (little endian): thumb, thumbv.*
     thumbeb,     // Thumb (big endian): thumbeb
+    ia16,        // IA-16: Intel 8086 through 80286
     x86,         // X86: i[3-9]86
     x86_64,      // X86-64: amd64, x86_64
     xcore,       // XCore: xcore
@@ -222,6 +223,7 @@ public:
     OpenBSD,
     Solaris,
     UEFI,
+    DOS,
     Win32,
     ZOS,
     Haiku,
@@ -694,6 +696,9 @@ public:
   bool isUEFI() const {
     return getOS() == Triple::UEFI;
   }
+
+  /// Tests whether the OS is DOS.
+  bool isOSDOS() const { return getOS() == Triple::DOS; }
 
   /// Tests whether the OS is Windows.
   bool isOSWindows() const {

@@ -723,7 +723,17 @@ bool X86AsmBackend::mayNeedRelaxation(unsigned Opcode,
                                       ArrayRef<MCOperand> Operands,
                                       const MCSubtargetInfo &STI) const {
   unsigned SkipOperands = X86::isCCMPCC(Opcode) ? 2 : 0;
-  return isRelaxableBranch(Opcode) ||
+  bool RelaxableBranch = isRelaxableBranch(Opcode);
+  // The 8086 through 80286 only have the rel8 conditional-branch encoding.
+  // Their long conditional form is a control-flow expansion, not the 386
+  // near-Jcc instruction selected by the generic X86 MC relaxer. CodeGen's
+  // IA-16 branch-relaxation pass performs that expansion; the assembler
+  // diagnoses an out-of-range source-level Jcc instead of emitting a 386
+  // opcode.
+  if (STI.getTargetTriple().getArch() == Triple::ia16 &&
+      MCII->get(Opcode).isConditionalBranch())
+    RelaxableBranch = false;
+  return RelaxableBranch ||
          (X86::getOpcodeForLongImmediateForm(Opcode) != Opcode &&
           Operands[Operands.size() - 1 - SkipOperands].isExpr());
 }
