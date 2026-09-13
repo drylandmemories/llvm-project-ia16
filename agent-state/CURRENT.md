@@ -2,40 +2,38 @@
 
 Schema: 1
 Project-ID: llvm-ia16-target
-Revision: 7
-Verified-At: 2026-09-13T14:19:54Z
-Verified-Against: 0af18ce9830252ddf97f4a68c0d2947b1af4cd02
-Evidence-Layer: source-build-selected-test-object-relocation-scan-and-bounded-linker-pass
+Revision: 8
+Verified-At: 2026-09-13T14:43:08Z
+Verified-Against: 184a0ab0a84d5d02abe4c9c28dc84b15cdc17b86
+Evidence-Layer: source-build-selected-test-object-relocation-scan-and-bounded-linker-partial
 
-Owner: Gate 1 SEGELF matrix partial; overflow blocker repaired
+Owner: Gate 1 SEGELF matrix partial; protected-mode blocker exposed
 Task-System-Status: adopted-v1.0.0
 Package-Digest: 0a745fc715ebcd5f665b64c4e9ee9c495371707542594b1a3ad710a4d59a07ce
-Gate-1: incomplete; baseline, per-CPU MC matrix, and bounded SEG16 overflow repair passed; remaining SEGELF matrix pending
+Gate-1: incomplete; baseline, MC matrix, and SEG16 overflow passed; protected-mode SEGELF rejection fails; remaining matrix pending
 Gate-2: incomplete
 Gate-3: incomplete
 Gate-4: incomplete
 Gate-5: incomplete
-Acceptance-Status: baseline-pass; G1-MC-pass; G1-SEGELF-partial; SEG16-overflow-pass; release-not-proven
+Acceptance-Status: baseline-pass; G1-MC-pass; G1-SEGELF-partial; SEG16-overflow-pass; protected-mode-blocked; release-not-proven
 Execution-Mode: serial-same-checkout-two-workers-one-heavy-process
-Independent-Review: pass at exact source; no findings for bounded SEG16 overflow repair
-Blocker: remaining SEGELF malformed, retention, protected-mode rejection, and relocation matrix unproved
+Independent-Review: protected-mode signaling/rejection defect confirmed at exact source
+Blocker: protected-mode identity is lost before ELF linking, so LLD applies forbidden real-mode SEGELF semantics
 
-At `0af18ce9830252ddf97f4a68c0d2947b1af4cd02`, LLD checks the shifted
-`R_386_SEG16` paragraph value before its 16-bit write. The focused object has
-one `R_386_SEG16` relocation; `S=0xfffff` links to `0xffff`, while
-`S=0x100000` exits 1 and diagnoses paragraph value `65536` as out of range.
-The existing adjacent same-offset `R_386_16`/`R_386_SUB16` exception test and
-the new overflow test pass 2/2. A nonauthor reviewer independently accepted
-the exact candidate with no findings.
+At `184a0ab0a84d5d02abe4c9c28dc84b15cdc17b86`, Clang
+records `ia16-protected-mode = 1` in IR but warns that `+protected-mode` is
+unrecognized. The ELF32 object has `e_flags = 0`, only the generic ABI note,
+and one `R_386_SEG16`. LLD exits 0 and writes `0x1234`; ABI v0.2 requires
+protected-mode rejection. A nonauthor reviewer independently reproduced the
+defect. The accepted real-mode SEGELF and SEG16 overflow tests pass 2/2.
 
-The baseline at `5d330b7d33eb3fa73035596b82f3c21c1ec843bd` retains its
-build, selected-test, opcode-scan, and emulator-runtime evidence. No broad
-`check-lld`, runtime, integration, package, release, deployment, or external
-acceptance is added here.
+Malformed input, retention, remaining overflow boundaries, and wider semantics
+remain unproved. No broad `check-lld`, runtime,
+integration, package, release, deployment, or external acceptance is added.
 
 Requirements: `agent-state/ROADMAP.md`
 Evidence register: `agent-state/ACCEPTANCE.md`
-Capsule: `/Users/tedbullock/Developer/llvm-ia16-tasks/r386-seg16-overflow-v2`
-Evidence: capsule `evidence/pass-0af18ce98302`
+Capsule: `/Users/tedbullock/Developer/llvm-ia16-tasks/resume-gate-1-segelf-matrix-v1`
+Evidence: capsule `evidence/partial-184a0ab0a84d`
 
-Next-Outcome: IA-16 — Resume bounded Gate 1 SEGELF matrix
+Next-Outcome: IA-16 — Repair protected-mode SEGELF signaling and rejection
