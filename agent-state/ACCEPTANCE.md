@@ -37,7 +37,7 @@ proof is absent or incomplete; it does not mean the implementation is absent.
 | G1-ABI | Versioned ABI spec covers layouts, frames, preserved registers, returns, variadics, all pointer/call forms, segment assumptions, interrupts, and all six models. | pending audit |
 | G1-TRIPLE | Parser unit tests and driver/lit tests prove both triples, DOS classification, CPU/tune aliases, model/mode options, data layouts, macros, and diagnostics. | partial selected parser/driver baseline; full option/diagnostic matrix pending |
 | G1-MC | Per-CPU positive and rejection tests plus executable opcode scans prove genuine 8086/8088/80186/80188/80286 generation and reject all post-286 resources. | bounded matrix passed at `6826ec878258c71da4c7355f6bb8544ac56476c1`: 4 selected tests, 73 instructions, 157 executable bytes, 10 load regions, 50 rejection cases, and injected `64`-`67` scanner checks; broad integration/runtime not claimed |
-| G1-SEGELF | MC, ELF writer/parser, and LLD tests prove `R_386_SEG16`, `R_386_SUB16`, `R_386_SUB32`, `R_386_HUGE8`, malformed cases, overflow, retention, and semantics. | partial at `869d9f3b7ba77585e1a5c5858b2d6404d810983b`: prior protected/real-mode and SEG16 evidence remains accepted; the remaining matrix stopped when standalone `R_386_SUB16` incorrectly wrapped `A-S=-32769` to `0x7fff` instead of diagnosing overflow, independently reproduced by a nonauthor; paired/non-allocated expressions, `R_386_SUB32`, `R_386_HUGE8`, malformed cases, and retention remain pending |
+| G1-SEGELF | MC, ELF writer/parser, and LLD tests prove `R_386_SEG16`, `R_386_SUB16`, `R_386_SUB32`, `R_386_HUGE8`, malformed cases, overflow, retention, and semantics. | partial at `85b57e39dcd46a21179e5b47018757396f29991c`: prior protected/real-mode and SEG16 evidence remains accepted; standalone `R_386_SUB16` now rejects `A-S=-32769` while accepting `-32768` and preserving the adjacent-pair exception, with exact build, selected-test, object/linker, and nonauthor review evidence; paired/non-allocated expression acceptance, `R_386_SUB32`, `R_386_HUGE8`, malformed cases, and retention remain pending |
 | G1-DIFF | Frozen gcc-ia16 `20240218` fixtures establish compatible cdecl/source behavior without copied implementation. | pending |
 | G2-CODEGEN | SelectionDAG legality, register/address constraints, lowering categories, branch relaxation, compiler-rt closure, and tiny/small freestanding programs pass for 8086. | partial historical evidence; full matrix pending |
 | G3-CLANG | TargetInfo, data model, qualifiers/address spaces, builtins, attributes, ABI lowering, diagnostics, and optimizer-safety tests pass. | pending complete interface audit |
@@ -60,13 +60,13 @@ initial release must not be described as implementing these items.
 
 ## Next acceptance outcome
 
-Run `IA-16 — Repair standalone R_386_SUB16 overflow handling` as one bounded
-source task. Add a failing lower-bound regression and the smallest range check
-for standalone `R_386_SUB16`, while preserving the conventional adjacent
-`R_386_16`/`R_386_SUB16` exception and all accepted protected/real-mode and
-SEG16 behavior. Bind build, selected-test, object/relocation-scan, and bounded
-linker evidence to one exact repair candidate and obtain independent review
-before resuming the remaining matrix in a separate acceptance task.
+Run `IA-16 — Resume remaining Gate 1 SEGELF matrix after standalone SUB16
+repair` as one bounded acceptance task. Begin from the accepted standalone
+`R_386_SUB16` repair and retain the existing protected/real-mode, SEG16
+overflow, adjacent-pair, and boundary regressions. Complete the still-pending
+paired/non-allocated expressions, `R_386_SUB32`, `R_386_HUGE8`, malformed
+cases, overflow, and retention matrix, stopping at the first implementation
+defect rather than repairing it inside an acceptance-only task.
 
 Calibrate the successor's starting reasoning effort to its capsule and adjust
 only when observed complexity warrants it, recording why. Keep every DOS-mounted
