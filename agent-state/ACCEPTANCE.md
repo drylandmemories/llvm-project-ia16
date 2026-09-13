@@ -37,7 +37,7 @@ proof is absent or incomplete; it does not mean the implementation is absent.
 | G1-ABI | Versioned ABI spec covers layouts, frames, preserved registers, returns, variadics, all pointer/call forms, segment assumptions, interrupts, and all six models. | pending audit |
 | G1-TRIPLE | Parser unit tests and driver/lit tests prove both triples, DOS classification, CPU/tune aliases, model/mode options, data layouts, macros, and diagnostics. | partial selected parser/driver baseline; full option/diagnostic matrix pending |
 | G1-MC | Per-CPU positive and rejection tests plus executable opcode scans prove genuine 8086/8088/80186/80188/80286 generation and reject all post-286 resources. | bounded matrix passed at `6826ec878258c71da4c7355f6bb8544ac56476c1`: 4 selected tests, 73 instructions, 157 executable bytes, 10 load regions, 50 rejection cases, and injected `64`-`67` scanner checks; broad integration/runtime not claimed |
-| G1-SEGELF | MC, ELF writer/parser, and LLD tests prove `R_386_SEG16`, `R_386_SUB16`, `R_386_SUB32`, `R_386_HUGE8`, malformed cases, overflow, retention, and semantics. | partial at `77d20218a5ed8e7eccaa8717269c13f447a27860`: prior protected/real-mode, SEG16, allocated-pair, and standalone SUB16 evidence remains accepted; a non-SHF_ALLOC adjacent `R_386_16`/`R_386_SUB16` expression produced `0xdbc3` instead of cumulative ABI result `0x003d`, independently reproduced with exact object/linker evidence; `R_386_SUB32`, `R_386_HUGE8`, malformed cases, additional overflow, and retention remain pending |
+| G1-SEGELF | MC, ELF writer/parser, and LLD tests prove `R_386_SEG16`, `R_386_SUB16`, `R_386_SUB32`, `R_386_HUGE8`, malformed cases, overflow, retention, and semantics. | partial at `13993a92f94ea8c0224f737ebcc9458aa0ed565a`: prior protected/real-mode, SEG16, allocated-pair, and standalone SUB16 evidence remains accepted; the repaired non-SHF_ALLOC adjacent `R_386_16`/`R_386_SUB16` expression passed a focused 1/1 test, the accepted five-test slice passed 5/5, a retained ELF32 object proves flags and relocation order, linked bytes are ABI-required `0x003d`, and exact-candidate nonauthor review found no issue; `R_386_SUB32`, `R_386_HUGE8`, malformed cases, additional overflow, and retention remain pending |
 | G1-DIFF | Frozen gcc-ia16 `20240218` fixtures establish compatible cdecl/source behavior without copied implementation. | pending |
 | G2-CODEGEN | SelectionDAG legality, register/address constraints, lowering categories, branch relaxation, compiler-rt closure, and tiny/small freestanding programs pass for 8086. | partial historical evidence; full matrix pending |
 | G3-CLANG | TargetInfo, data model, qualifiers/address spaces, builtins, attributes, ABI lowering, diagnostics, and optimizer-safety tests pass. | pending complete interface audit |
@@ -60,14 +60,18 @@ initial release must not be described as implementing these items.
 
 ## Next acceptance outcome
 
-Run `IA-16 — Repair non-allocated adjacent SEGELF subtraction semantics` as one
-bounded source task. Add the failing non-SHF_ALLOC `R_386_16`/`R_386_SUB16`
-regression and make the smallest LLD correction that preserves cumulative ABI
-semantics. Retain the accepted allocated expression, protected/real-mode,
-SEG16 overflow, and standalone SUB16 boundary regressions. Rebuild and obtain
-exact-candidate nonauthor review before a fresh acceptance task resumes
-`R_386_SUB32`, `R_386_HUGE8`, malformed, additional overflow, and retention
-cases.
+Run `IA-16 — Resume remaining Gate 1 SEGELF matrix after non-allocated pair
+repair` as one bounded acceptance-only task from the clean reviewed state commit
+containing product candidate `13993a92f94ea8c0224f737ebcc9458aa0ed565a`.
+First retain the six accepted IA-16 LLD regressions: ABI note,
+protected/real-mode SEGELF, SEG16 overflow, allocated SEGELF relocations,
+standalone SUB16 boundaries, and the non-allocated pair. Then exercise
+`R_386_SUB32`, `R_386_HUGE8`, malformed relocation, additional overflow, and
+relocation-retention cases one at a time. Preserve exact source/build/tool
+identities and separate selected-test, object-relocation, bounded-linker, and
+review evidence. Stop at the first implementation defect; do not repair source,
+run broad integration/runtime/release work, or claim Gate 1 completion unless
+every registered Gate 1 requirement is independently proved.
 
 Calibrate the successor's starting reasoning effort to its capsule and adjust
 only when observed complexity warrants it, recording why. Keep every DOS-mounted
