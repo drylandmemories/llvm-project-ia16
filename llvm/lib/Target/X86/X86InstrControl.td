@@ -283,6 +283,12 @@ def IA16_CALLpcrel16 : Ii16PCRel<0xE8, RawFrm, (outs),
                        (ins i16imm_brtarget:$dst), "call{w}\t$dst", []>,
                        OpSize16, Requires<[Not64BitMode]>;
 
+let isCall = 1, Uses = [SP], isCodeGenOnly = 1, hasSideEffects = 0,
+    SchedRW = [WriteJump] in
+def IA16_CALL16r : I<0xFF, MRM2r, (outs), (ins IA16_GR16:$dst),
+                    "call{w}\t{*}$dst", []>,
+                  OpSize16, Requires<[Not64BitMode]>;
+
 
 // Tail call stuff.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,

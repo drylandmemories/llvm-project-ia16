@@ -4,6 +4,7 @@
 
 # CHECK: movw (%bx,%si), %ax # encoding: [0x8b,0x00]
 # CHECK: addw %dx, %ax # encoding: [0x01,0xd0]
+# CHECK: callw *%bx # encoding: [0xff,0xd3]
 # CHECK: retw # encoding: [0xc3]
 
 # ELF: Class: 32-bit
@@ -12,4 +13,5 @@
 
 movw (%bx,%si), %ax
 addw %dx, %ax
+callw *%bx
 retw

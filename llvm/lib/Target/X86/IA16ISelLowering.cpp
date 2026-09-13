@@ -176,21 +176,24 @@ SDValue IA16TargetLowering::LowerCall(
   }
 
   SDValue Callee = CLI.Callee;
+  unsigned CallOpcode = X86::IA16_CALLpcrel16;
   if (auto *GA = dyn_cast<GlobalAddressSDNode>(Callee))
     Callee = DAG.getTargetGlobalAddress(GA->getGlobal(), DL, MVT::i16,
                                         GA->getOffset());
   else if (auto *ES = dyn_cast<ExternalSymbolSDNode>(Callee))
     Callee = DAG.getTargetExternalSymbol(ES->getSymbol(), MVT::i16);
-  else
-    report_fatal_error("indirect IA-16 calls are not implemented");
+  else {
+    if (Callee.getValueType() != MVT::i16)
+      report_fatal_error("unsupported IA-16 indirect-call pointer type");
+    CallOpcode = X86::IA16_CALL16r;
+  }
 
   const uint32_t *Mask =
       DAG.getMachineFunction().getSubtarget().getRegisterInfo()->
           getCallPreservedMask(DAG.getMachineFunction(), CLI.CallConv);
   SDValue CallOps[] = {Callee, DAG.getRegisterMask(Mask), Chain};
   SDVTList CallVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-  SDNode *Call =
-      DAG.getMachineNode(X86::IA16_CALLpcrel16, DL, CallVTs, CallOps);
+  SDNode *Call = DAG.getMachineNode(CallOpcode, DL, CallVTs, CallOps);
   Chain = SDValue(Call, 0);
   SDValue Glue(Call, 1);
 

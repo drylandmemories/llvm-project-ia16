@@ -40,6 +40,7 @@ int compare_unsigned(unsigned int left, unsigned int right) {
   return left >= right;
 }
 int compare_add(int left, int right) { return (left < right) + 7; }
+int call_indirect(int (*function)(int), int value) { return function(value); }
 
 // CHECK-LABEL: add:
 // CHECK:       pushw %bp
@@ -133,4 +134,10 @@ int compare_add(int left, int right) { return (left < right) + 7; }
 // CHECK-LABEL: compare_add:
 // CHECK:       cmpw
 // CHECK:       jl
+// CHECK:       retw
+
+// CHECK-LABEL: call_indirect:
+// CHECK:       pushw
+// CHECK:       callw *%{{(ax|bx|cx|dx|si|di|bp)}}
+// CHECK:       addw $2,
 // CHECK:       retw
