@@ -179,7 +179,7 @@ void IA16TargetInfo::getTargetDefines(const LangOptions &Opts,
   // gcc-ia16 uses this date-valued macro as its compatibility version.
   Builder.defineMacro("__ia16__", "20240218L");
   Builder.defineMacro("__IA16__");
-  Builder.defineMacro("__IA16_ABI_VERSION__", "0x000100");
+  Builder.defineMacro("__IA16_ABI_VERSION__", "0x000200");
   Builder.defineMacro("__X86__");
   Builder.defineMacro("__I86__");
   Builder.defineMacro("__i86");

@@ -206,6 +206,7 @@ public:
         return;
       }
       break;
+    case ISD::ANY_EXTEND:
     case ISD::ZERO_EXTEND:
       if (N->getValueType(0) == MVT::i16 &&
           N->getOperand(0).getValueType() == MVT::i8) {

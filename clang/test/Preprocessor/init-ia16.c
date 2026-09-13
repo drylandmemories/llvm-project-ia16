@@ -5,7 +5,7 @@
 // RUN:   -target-cpu i286 -target-feature +protected-mode < /dev/null | FileCheck %s --check-prefixes=COMMON,I286,SMALL,PROTECTED
 
 // COMMON-DAG: #define __IA16__ 1
-// COMMON-DAG: #define __IA16_ABI_VERSION__ 0x000100
+// COMMON-DAG: #define __IA16_ABI_VERSION__ 0x000200
 // COMMON-DAG: #define __FAR 1
 // COMMON-DAG: #define __SEG_SS 1
 // COMMON-DAG: #define __STDC_NO_ATOMICS__ 1

@@ -1,5 +1,5 @@
 ====================================
-IA-16 C and Segmented ELF ABI, v0.1
+IA-16 C and Segmented ELF ABI, v0.2
 ====================================
 
 :Status: Gate 1 frozen; incompatible changes require a version bump
@@ -15,9 +15,9 @@ valid on the selected pre-386 processor.
 Version identification
 ======================
 
-The compiler defines ``__IA16_ABI_VERSION__`` as ``0x000100`` for this ABI.
+The compiler defines ``__IA16_ABI_VERSION__`` as ``0x000200`` for this ABI.
 Object producers add an ELF ``.note.ia16.abi`` note containing the NUL-ended
-ASCII string ``IA16-ABI:0.1``.  LLD diagnoses a link that combines different
+ASCII string ``IA16-ABI:0.2``.  LLD diagnoses a link that combines different
 IA-16 ABI versions.  These producer and linker requirements become active
 when the IA-16 code generator and linker driver are enabled.
 
@@ -147,11 +147,11 @@ stack-resident and caller-popped.  Aggregate register splitting is forbidden.
 Return values are placed as follows:
 
 * 8- and 16-bit integers and near pointers: AX (8-bit values in AL).
-* 32-bit integers, far/huge pointers, and far function pointers: DX:AX, with
-  the low or offset word in AX.
-* 64-bit integers, floating values, and aggregates larger than four bytes: a
-  caller-provided near or far result pointer matching the result object's
-  address space, passed as a hidden first argument.
+* 32-bit integers, ``float``, far/huge pointers, and far function pointers:
+  DX:AX, with the low or offset word in AX.
+* 64-bit integers, ``double``, ``long double``, complex values, and aggregates
+  larger than four bytes: a caller-provided near or far result pointer matching
+  the result object's address space, passed as a hidden first argument.
 * Aggregates of one or two bytes: AX.  Aggregates of three or four bytes:
   DX:AX, with memory byte order preserved from low to high.
 
@@ -210,7 +210,7 @@ The freestanding 80286 protected-mode runtime owns GDT construction and mode
 entry.  C entry receives valid code, near-data, and stack selectors already
 loaded.  The ABI does not prescribe DOS services once protected mode is active.
 
-Excluded from v0.1
+Excluded from v0.2
 ==================
 
 C++, exceptions, RTTI, atomics, TLS, dynamic linking, PIC, sanitizers, JIT,

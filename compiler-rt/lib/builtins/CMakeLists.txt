@@ -887,19 +887,32 @@ set(m68k_SOURCES ${GENERIC_SOURCES})
 # Keep the IA-16 list explicit: generic builtins are admitted only after their
 # 16-bit ABI lowering and transitive runtime dependencies are validated.
 set(ia16_SOURCES
+  adddf3.c
+  addsf3.c
   ashldi3.c
   ashrdi3.c
-  divsi3.c
+  comparedf2.c
+  comparesf2.c
+  divdf3.c
   divdi3.c
+  divsf3.c
+  divsi3.c
+  extendsfdf2.c
+  fp_mode.c
   lshrdi3.c
-  modsi3.c
   moddi3.c
+  modsi3.c
+  muldf3.c
   muldi3.c
-  udivsi3.c
+  mulsf3.c
+  subdf3.c
+  subsf3.c
+  truncdfsf2.c
   udivdi3.c
   udivmoddi4.c
-  umodsi3.c
+  udivsi3.c
   umoddi3.c
+  umodsi3.c
   ia16/ashlsi3.S
   ia16/ashrsi3.S
   ia16/lshrsi3.S

@@ -40,9 +40,10 @@ public:
                                      /*ByVal=*/false);
     }
 
-    // IA-16 returns floating values and integer scalars wider than DX:AX
-    // through a caller-provided result object.
-    if (Ty->isRealFloatingType() || Ty->isAnyComplexType() || Size > 32)
+    // Scalars up to 32 bits, including float, return in DX:AX.  Wider
+    // floating and integer values, along with complex values, use a
+    // caller-provided result object.
+    if (Ty->isAnyComplexType() || Size > 32)
       return getNaturalAlignIndirect(Ty,
                                      getDataLayout().getAllocaAddrSpace(),
                                      /*ByVal=*/false);
