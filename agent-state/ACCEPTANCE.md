@@ -37,7 +37,7 @@ proof is absent or incomplete; it does not mean the implementation is absent.
 | G1-ABI | Versioned ABI spec covers layouts, frames, preserved registers, returns, variadics, all pointer/call forms, segment assumptions, interrupts, and all six models. | pending audit |
 | G1-TRIPLE | Parser unit tests and driver/lit tests prove both triples, DOS classification, CPU/tune aliases, model/mode options, data layouts, macros, and diagnostics. | partial selected parser/driver baseline; full option/diagnostic matrix pending |
 | G1-MC | Per-CPU positive and rejection tests plus executable opcode scans prove genuine 8086/8088/80186/80188/80286 generation and reject all post-286 resources. | bounded matrix passed at `6826ec878258c71da4c7355f6bb8544ac56476c1`: 4 selected tests, 73 instructions, 157 executable bytes, 10 load regions, 50 rejection cases, and injected `64`-`67` scanner checks; broad integration/runtime not claimed |
-| G1-SEGELF | MC, ELF writer/parser, and LLD tests prove `R_386_SEG16`, `R_386_SUB16`, `R_386_SUB32`, `R_386_HUGE8`, malformed cases, overflow, retention, and semantics. | partial at `18edd2802535a1feaba86d03c8ef4e8f04517e94`: selected test and minimal object/relocation scan pass, but `R_386_SEG16` output overflow silently truncates `0x10000` to `0x0000`; malformed, retention, protected-mode rejection, and remaining overflow matrix pending |
+| G1-SEGELF | MC, ELF writer/parser, and LLD tests prove `R_386_SEG16`, `R_386_SUB16`, `R_386_SUB32`, `R_386_HUGE8`, malformed cases, overflow, retention, and semantics. | partial at `0af18ce9830252ddf97f4a68c0d2947b1af4cd02`: bounded `R_386_SEG16` overflow repair passed independent review; selected tests pass 2/2, the object scan shows one `R_386_SEG16`, `S=0xfffff` writes `0xffff`, and `S=0x100000` is diagnosed; malformed, retention, protected-mode rejection, and remaining relocation matrix pending |
 | G1-DIFF | Frozen gcc-ia16 `20240218` fixtures establish compatible cdecl/source behavior without copied implementation. | pending |
 | G2-CODEGEN | SelectionDAG legality, register/address constraints, lowering categories, branch relaxation, compiler-rt closure, and tiny/small freestanding programs pass for 8086. | partial historical evidence; full matrix pending |
 | G3-CLANG | TargetInfo, data model, qualifiers/address spaces, builtins, attributes, ABI lowering, diagnostics, and optimizer-safety tests pass. | pending complete interface audit |
@@ -60,11 +60,12 @@ initial release must not be described as implementing these items.
 
 ## Next acceptance outcome
 
-Run `IA-16 — Diagnose R_386_SEG16 output overflow` as one bounded Bug task.
-Add the missing LLD overflow diagnostic and its smallest regression for the
-retained `S=0x100000` fixture. Do not widen the repair into the remaining
-SEGELF malformed, retention, protected-mode rejection, or relocation matrix;
-that matrix resumes only after the defect is independently accepted.
+Run `IA-16 — Resume bounded Gate 1 SEGELF matrix` as one bounded acceptance
+task. Continue with the remaining malformed-input, relocation-retention,
+protected-mode rejection, and overflow/semantics cases for the frozen SEGELF
+family. Preserve the independently accepted `R_386_SEG16` overflow repair and
+stop on any new implementation defect rather than repairing it in the matrix
+task.
 
 Calibrate the successor's starting reasoning effort to its capsule and adjust
 only when observed complexity warrants it, recording why. Keep every DOS-mounted
