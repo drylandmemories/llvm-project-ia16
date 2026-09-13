@@ -24,7 +24,7 @@ proof is absent or incomplete; it does not mean the implementation is absent.
 
 | Evidence | Current disposition | Limitation / next proof |
 | --- | --- | --- |
-| Source through `5d330b7d33eb3fa73035596b82f3c21c1ec843bd` | retained source evidence | The selected baseline was reproduced; commits and selected tests do not prove gate closure. |
+| Source through `6826ec878258c71da4c7355f6bb8544ac56476c1` | retained source evidence | The baseline and bounded MC matrix were reproduced; commits and selected tests do not prove gate closure. |
 | Reproducible IA-16 selection at `5d330b7d33eb3fa73035596b82f3c21c1ec843bd` | retained selected-test evidence | 7 LLVM, 18 Clang, and 2 LLD lit tests plus the exact 7 TargetParser tests passed. This closes the historical SEGELF/parser omission only; it is not full Gate 1 or broad integration evidence. |
 | Historical `clang` and IA-16 compiler-rt builds with two workers | historical build evidence only | Re-run using documented environment and exact SHA; archive symbol/closure checks remain separately required. |
 | Reproducible arithmetic/division/byte-swap `.COM` probes | retained opcode-scan and emulator-runtime evidence | 9 fresh probes passed for 8086, 80186, and 80286 at `-O0`, `-O2`, and `-Os`; 3,395 instructions and all load regions were accounted. Broader model/runtime acceptance remains pending. |
@@ -36,7 +36,7 @@ proof is absent or incomplete; it does not mean the implementation is absent.
 | --- | --- | --- |
 | G1-ABI | Versioned ABI spec covers layouts, frames, preserved registers, returns, variadics, all pointer/call forms, segment assumptions, interrupts, and all six models. | pending audit |
 | G1-TRIPLE | Parser unit tests and driver/lit tests prove both triples, DOS classification, CPU/tune aliases, model/mode options, data layouts, macros, and diagnostics. | partial selected parser/driver baseline; full option/diagnostic matrix pending |
-| G1-MC | Per-CPU positive and rejection tests plus executable opcode scans prove genuine 8086/8088/80186/80188/80286 generation and reject all post-286 resources. | partial reproducible probe scan; comprehensive matrix pending |
+| G1-MC | Per-CPU positive and rejection tests plus executable opcode scans prove genuine 8086/8088/80186/80188/80286 generation and reject all post-286 resources. | bounded matrix passed at `6826ec878258c71da4c7355f6bb8544ac56476c1`: 4 selected tests, 73 instructions, 157 executable bytes, 10 load regions, 50 rejection cases, and injected `64`-`67` scanner checks; broad integration/runtime not claimed |
 | G1-SEGELF | MC, ELF writer/parser, and LLD tests prove `R_386_SEG16`, `R_386_SUB16`, `R_386_SUB32`, `R_386_HUGE8`, malformed cases, overflow, retention, and semantics. | selected SEGELF test passed; full malformed/overflow/retention matrix pending |
 | G1-DIFF | Frozen gcc-ia16 `20240218` fixtures establish compatible cdecl/source behavior without copied implementation. | pending |
 | G2-CODEGEN | SelectionDAG legality, register/address constraints, lowering categories, branch relaxation, compiler-rt closure, and tiny/small freestanding programs pass for 8086. | partial historical evidence; full matrix pending |
@@ -60,13 +60,11 @@ initial release must not be described as implementing these items.
 
 ## Next acceptance outcome
 
-Run `IA-16 — Gate 1 per-CPU MC generation and rejection matrix`. Extend the
-accepted harness/tests only as needed to prove positive and negative instruction
-generation boundaries for 8086, 8088, 80186, 80188, and 80286. Reject 386
-registers, prefixes, and post-286 opcodes; account every admitted instruction;
-and preserve exact commands/results. Do not repair implementation defects in
-that task: retain the smallest failing fixture and hand off one bounded defect.
+Run `IA-16 — Gate 1 SEGELF malformed, overflow, and retention matrix`. Extend
+accepted tests or harnesses only as needed to prove the frozen relocation
+semantics, malformed inputs, overflow behavior, and retention. Do not repair an
+implementation defect in that task; retain its smallest deterministic fixture.
 
-Use the configured default model at low reasoning unless bounded complexity
-justifies escalation. Keep every DOS-mounted fixture name within uppercase 8.3;
-historical DOS fixture-name auditing remains a later concern.
+Calibrate the successor's starting reasoning effort to its capsule and adjust
+only when observed complexity warrants it, recording why. Keep every DOS-mounted
+fixture name within uppercase 8.3; historical filename auditing remains later.
