@@ -31,6 +31,7 @@ CPUS = {
     "i80286": {"rank": 2, "dosbox": "286"},
 }
 CPU_NAME_BY_RANK = {0: "i8086", 1: "i80186", 2: "i80286", 3: "post-i80286"}
+DOS_NAME_83 = re.compile(r"^[A-Z0-9_]{1,8}(?:\.[A-Z0-9_]{1,3})?$")
 
 # These opcode bytes are the generation boundaries relevant to code emitted by
 # this fixture.  Every decoded instruction is recorded.  Prefixes and the 0x0f
@@ -288,6 +289,10 @@ def sha256_file(path: pathlib.Path) -> str:
     return digest.hexdigest()
 
 
+def is_dos_83_name(name: str) -> bool:
+    return DOS_NAME_83.fullmatch(name) is not None
+
+
 def write_text(path: pathlib.Path, value: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="\n") as stream:
@@ -537,6 +542,11 @@ def self_test() -> None:
         output = pathlib.Path(directory) / "nested" / "line-endings.txt"
         write_text(output, "first\nsecond\n")
         assert output.read_bytes() == b"first\nsecond\n"
+    for name in ("PROBE.COM", "RESULT.OK", "FAIL.BIN"):
+        assert is_dos_83_name(name)
+    for name in ("probe-result.ok", "TOO-LONG.COM", "RESULT.LONG"):
+        assert not is_dos_83_name(name)
+    print("IA16-DOS-NAMES-8.3: PASS")
     sample = """
 00000100 <_start>:
  100: 55             pushw %bp
@@ -831,6 +841,10 @@ def run_acceptance(args: argparse.Namespace) -> int:
                     )
                     continue
 
+                dos_dir = probe_dir / "dosrun"
+                dos_dir.mkdir()
+                shutil.copy2(com, dos_dir / "PROBE.COM")
+
                 readobj = recorder.run(
                     f"sections-{cpu}-{opt}",
                     [
@@ -889,7 +903,7 @@ def run_acceptance(args: argparse.Namespace) -> int:
                         "-time-limit",
                         str(args.emulator_timeout),
                         "-c",
-                        f"mount c {probe_dir}",
+                        f"mount c {dos_dir}",
                         "-c",
                         "c:",
                         "-c",
@@ -897,16 +911,19 @@ def run_acceptance(args: argparse.Namespace) -> int:
                         "-c",
                         "exit",
                     ],
-                    cwd=probe_dir,
+                    cwd=dos_dir,
                     timeout=args.emulator_timeout + 5,
                 )
-                success_path = probe_dir / "RESULT.OK"
-                fail_path = probe_dir / "FAIL.BIN"
+                success_path = dos_dir / "RESULT.OK"
+                fail_path = dos_dir / "FAIL.BIN"
+                dos_visible_files = sorted(path.name for path in dos_dir.iterdir())
+                dos_names_ok = all(is_dos_83_name(name) for name in dos_visible_files)
                 runtime_ok = (
                     emulator.returncode == 0
                     and success_path.is_file()
                     and success_path.read_bytes() == b"OK"
                     and not fail_path.exists()
+                    and dos_names_ok
                 )
                 runtime_statuses.append(runtime_ok)
                 probe_records.append(
@@ -923,6 +940,8 @@ def run_acceptance(args: argparse.Namespace) -> int:
                         },
                         "cpu": cpu,
                         "dosbox_cpu": cpu_info["dosbox"],
+                        "dos_visible_files": dos_visible_files,
+                        "dos_visible_names_8_3": dos_names_ok,
                         "instruction_count": len(instructions),
                         "opcode_status": "pass" if opcode_ok else "fail",
                         "optimization": opt,
@@ -941,7 +960,11 @@ def run_acceptance(args: argparse.Namespace) -> int:
         }
         result["evidence_layers"]["emulator-runtime"] = {
             "status": "pass" if runtime_statuses and all(runtime_statuses) else "fail",
-            "evidence": ["probe-results.json", "probes/*/*/RESULT.OK", "logs/*-emulator-*.log"],
+            "evidence": [
+                "probe-results.json",
+                "probes/*/*/dosrun/RESULT.OK",
+                "logs/*-emulator-*.log",
+            ],
         }
 
         all_pass = all(
@@ -987,6 +1010,13 @@ def run_acceptance(args: argparse.Namespace) -> int:
             },
             {
                 "requirement": "arithmetic, division edges, and bswap at O0/O2/Os",
+                "layer": "emulator-runtime",
+                "status": layers.get("emulator-runtime", {}).get(
+                    "status", "not-run"
+                ),
+            },
+            {
+                "requirement": "DOS-mounted runtime surface uses only 8.3 names",
                 "layer": "emulator-runtime",
                 "status": layers.get("emulator-runtime", {}).get(
                     "status", "not-run"
