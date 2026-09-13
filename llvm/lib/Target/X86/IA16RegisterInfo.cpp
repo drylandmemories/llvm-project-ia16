@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "IA16RegisterInfo.h"
+#include "IA16Subtarget.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -28,8 +29,8 @@ IA16RegisterInfo::getCalleeSavedRegs(const MachineFunction *) const {
   return CalleeSaved;
 }
 
-const uint32_t *IA16RegisterInfo::getCallPreservedMask(
-    const MachineFunction &, CallingConv::ID) const {
+const uint32_t *IA16RegisterInfo::getCallPreservedMask(const MachineFunction &,
+                                                       CallingConv::ID) const {
   static std::vector<uint32_t> Mask(
       MachineOperand::getRegMaskSize(X86::NUM_TARGET_REGS), 0);
   static std::once_flag Once;
@@ -53,9 +54,11 @@ BitVector IA16RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   for (MCPhysReg Reg : X86::IA16_GR8RegClass)
     Reserved.reset(Reg);
 
+  // SP is not a legal 8086 addressing base. Reserve BP in every function so
+  // spills discovered during register allocation can always acquire a frame
+  // pointer without changing the allocation contract after the fact.
   Reserved.set(X86::SP);
-  if (MF.getFrameInfo().getObjectIndexBegin() < 0)
-    Reserved.set(X86::BP);
+  Reserved.set(X86::BP);
 
   return Reserved;
 }
@@ -72,7 +75,7 @@ bool IA16RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  bool HasFP = MF.getFrameInfo().getObjectIndexBegin() < 0;
+  bool HasFP = MF.getSubtarget<IA16Subtarget>().getFrameLowering()->hasFP(MF);
   int64_t Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
   if (HasFP) {
     if (FrameIndex < 0)
@@ -90,5 +93,7 @@ bool IA16RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 }
 
 Register IA16RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  return MF.getFrameInfo().getObjectIndexBegin() < 0 ? X86::BP : X86::SP;
+  return MF.getSubtarget<IA16Subtarget>().getFrameLowering()->hasFP(MF)
+             ? X86::BP
+             : X86::SP;
 }

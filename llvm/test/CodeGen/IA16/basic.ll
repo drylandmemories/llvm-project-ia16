@@ -29,10 +29,10 @@ declare i16 @callee(i16, i16)
 
 define i16 @caller() {
 ; CHECK-LABEL: caller:
-; CHECK:       movw $3, %ax
-; CHECK-NEXT:  pushw %ax
-; CHECK-NEXT:  movw $2, %ax
-; CHECK-NEXT:  pushw %ax
+; CHECK:       movw $3, [[THREE:%[a-z]+]]
+; CHECK-NEXT:  movw $2, [[TWO:%[a-z]+]]
+; CHECK-NEXT:  pushw [[THREE]]
+; CHECK-NEXT:  pushw [[TWO]]
 ; CHECK-NEXT:  callw callee
 ; CHECK:       addw $4,
 ; CHECK:       retw

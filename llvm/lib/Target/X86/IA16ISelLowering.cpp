@@ -84,12 +84,13 @@ SDValue IA16TargetLowering::LowerOperation(SDValue Op,
   SDValue FrameIndex = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(),
                                          getPointerTy(DAG.getDataLayout()));
   const Value *SrcValue = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
-  return DAG.getStore(Op.getOperand(0), SDLoc(Op), FrameIndex,
-                      Op.getOperand(1), MachinePointerInfo(SrcValue));
+  return DAG.getStore(Op.getOperand(0), SDLoc(Op), FrameIndex, Op.getOperand(1),
+                      MachinePointerInfo(SrcValue));
 }
 
-MachineBasicBlock *IA16TargetLowering::EmitInstrWithCustomInserter(
-    MachineInstr &MI, MachineBasicBlock *MBB) const {
+MachineBasicBlock *
+IA16TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
+                                                MachineBasicBlock *MBB) const {
   bool IsSetCC = MI.getOpcode() == X86::IA16_SETCC16;
   if (!IsSetCC && MI.getOpcode() != X86::IA16_SELECTCC16)
     report_fatal_error("unexpected IA-16 custom-inserter instruction");
@@ -132,8 +133,7 @@ MachineBasicBlock *IA16TargetLowering::EmitInstrWithCustomInserter(
       .addMBB(SinkMBB)
       .addImm(MI.getOperand(CCOperand).getImm());
   if (IsSetCC)
-    BuildMI(*FalseMBB, FalseMBB->end(), DL, TII.get(X86::MOV16ri),
-            FalseValue)
+    BuildMI(*FalseMBB, FalseMBB->end(), DL, TII.get(X86::MOV16ri), FalseValue)
         .addImm(0);
   BuildMI(*SinkMBB, SinkMBB->begin(), DL, TII.get(TargetOpcode::PHI),
           MI.getOperand(0).getReg())
@@ -171,9 +171,9 @@ SDValue IA16TargetLowering::LowerFormalArguments(
 
     int FI = MFI.CreateFixedObject(2, Offset, true);
     SDValue Addr = DAG.getFrameIndex(FI, MVT::i16);
-    SDValue Value = DAG.getLoad(VT, DL, Chain, Addr,
-                                MachinePointerInfo::getFixedStack(
-                                    DAG.getMachineFunction(), FI));
+    SDValue Value = DAG.getLoad(
+        VT, DL, Chain, Addr,
+        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
     InVals.push_back(Value);
     if (Arg.Flags.isSRet()) {
       auto *FuncInfo = MF.getInfo<IA16MachineFunctionInfo>();
@@ -194,8 +194,8 @@ SDValue IA16TargetLowering::LowerFormalArguments(
   return Chain;
 }
 
-SDValue IA16TargetLowering::LowerCall(
-    CallLoweringInfo &CLI, SmallVectorImpl<SDValue> &InVals) const {
+SDValue IA16TargetLowering::LowerCall(CallLoweringInfo &CLI,
+                                      SmallVectorImpl<SDValue> &InVals) const {
   if (CLI.CallConv != CallingConv::C)
     report_fatal_error("unsupported IA-16 call convention");
   CLI.IsTailCall = false;
@@ -214,9 +214,19 @@ SDValue IA16TargetLowering::LowerCall(
       report_fatal_error("unsupported IA-16 call argument type");
     StackBytes += 2;
   }
-  SDValue Chain = DAG.getCALLSEQ_START(CLI.Chain, StackBytes, 0, DL);
+  SDValue Chain = CLI.Chain;
+  SmallVector<Register, 8> PreparedArgs;
+  auto PrepareArg = [&](SDValue Value) {
+    Register Reg = DAG.getMachineFunction().getRegInfo().createVirtualRegister(
+        getRegClassFor(MVT::i16));
+    Chain = DAG.getCopyToReg(Chain, DL, Reg, Value);
+    PreparedArgs.push_back(Reg);
+  };
 
-  // cdecl arguments are pushed right-to-left in complete 16-bit words.
+  // Compute and preserve every argument before opening the call-frame region.
+  // Custom inserters may split control flow while producing an argument (for
+  // example, a legalized multiword carry). Keeping those splits outside the
+  // CALLSEQ_START/END pair is required by the machine verifier.
   for (int I = static_cast<int>(CLI.Outs.size()) - 1; I >= 0; --I) {
     const ISD::ArgFlagsTy &Flags = CLI.Outs[I].Flags;
     if (Flags.isByVal()) {
@@ -236,9 +246,7 @@ SDValue IA16TargetLowering::LowerCall(
         Chain = Load.getValue(1);
         if (LoadVT == MVT::i8)
           Value = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Value);
-        SDValue Ops[] = {Value, Chain};
-        Chain = SDValue(
-            DAG.getMachineNode(X86::IA16_PUSH16r, DL, MVT::Other, Ops), 0);
+        PrepareArg(Value);
       }
       continue;
     }
@@ -248,6 +256,15 @@ SDValue IA16TargetLowering::LowerCall(
           CLI.Outs[I].Flags.isSExt() ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
       Value = DAG.getNode(ExtendOpcode, DL, MVT::i16, Value);
     }
+    PrepareArg(Value);
+  }
+
+  Chain = DAG.getCALLSEQ_START(Chain, StackBytes, 0, DL);
+
+  // cdecl arguments are pushed right-to-left in complete 16-bit words.
+  for (Register Reg : PreparedArgs) {
+    SDValue Value = DAG.getCopyFromReg(Chain, DL, Reg, MVT::i16);
+    Chain = Value.getValue(1);
     SDValue Ops[] = {Value, Chain};
     Chain =
         SDValue(DAG.getMachineNode(X86::IA16_PUSH16r, DL, MVT::Other, Ops), 0);
@@ -267,8 +284,10 @@ SDValue IA16TargetLowering::LowerCall(
   }
 
   const uint32_t *Mask =
-      DAG.getMachineFunction().getSubtarget().getRegisterInfo()->
-          getCallPreservedMask(DAG.getMachineFunction(), CLI.CallConv);
+      DAG.getMachineFunction()
+          .getSubtarget()
+          .getRegisterInfo()
+          ->getCallPreservedMask(DAG.getMachineFunction(), CLI.CallConv);
   SDValue CallOps[] = {Callee, DAG.getRegisterMask(Mask), Chain};
   SDVTList CallVTs = DAG.getVTList(MVT::Other, MVT::Glue);
   SDNode *Call = DAG.getMachineNode(CallOpcode, DL, CallVTs, CallOps);
@@ -287,8 +306,7 @@ SDValue IA16TargetLowering::LowerCall(
     if (Index > 1)
       report_fatal_error("unsupported IA-16 multiword call result");
     MCRegister ResultReg = Index == 0 ? X86::AX : X86::DX;
-    SDValue Result =
-        DAG.getCopyFromReg(Chain, DL, ResultReg, MVT::i16, Glue);
+    SDValue Result = DAG.getCopyFromReg(Chain, DL, ResultReg, MVT::i16, Glue);
     InVals.push_back(Result);
     Chain = Result.getValue(1);
     Glue = Result.getValue(2);
@@ -309,11 +327,11 @@ bool IA16TargetLowering::CanLowerReturn(
   return Outs[0].VT == MVT::i16 && Outs[1].VT == MVT::i16;
 }
 
-SDValue IA16TargetLowering::LowerReturn(
-    SDValue Chain, CallingConv::ID CallConv, bool,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
-    SelectionDAG &DAG) const {
+SDValue
+IA16TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool,
+                                const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                const SmallVectorImpl<SDValue> &OutVals,
+                                const SDLoc &DL, SelectionDAG &DAG) const {
   if (!CanLowerReturn(CallConv, DAG.getMachineFunction(), false, Outs,
                       *DAG.getContext(), nullptr))
     report_fatal_error("unsupported IA-16 return type");
@@ -321,8 +339,7 @@ SDValue IA16TargetLowering::LowerReturn(
   SmallVector<SDValue, 2> RetOps;
   for (auto [Index, Out] : llvm::enumerate(Outs)) {
     MVT VT = Out.VT;
-    MCRegister Reg = VT == MVT::i8 ? X86::AL
-                                   : Index == 0 ? X86::AX : X86::DX;
+    MCRegister Reg = VT == MVT::i8 ? X86::AL : Index == 0 ? X86::AX : X86::DX;
     Chain = DAG.getCopyToReg(Chain, DL, Reg, OutVals[Index]);
     RetOps.push_back(DAG.getRegister(Reg, VT));
   }

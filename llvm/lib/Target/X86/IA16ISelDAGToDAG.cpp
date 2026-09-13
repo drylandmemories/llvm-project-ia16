@@ -76,8 +76,8 @@ class IA16DAGToDAGISel final : public SelectionDAGISel {
       Disp = CurDAG->getSignedTargetConstant(0, DL, MVT::i32);
     } else if (auto *GA = dyn_cast<GlobalAddressSDNode>(Ptr)) {
       Base = CurDAG->getRegister(0, MVT::i16);
-      Disp = CurDAG->getTargetGlobalAddress(
-          GA->getGlobal(), DL, MVT::i16, GA->getOffset());
+      Disp = CurDAG->getTargetGlobalAddress(GA->getGlobal(), DL, MVT::i16,
+                                            GA->getOffset());
     } else {
       Base = Ptr;
       Disp = CurDAG->getSignedTargetConstant(0, DL, MVT::i32);
@@ -157,14 +157,16 @@ public:
       CurDAG->SelectNodeTo(N, TargetOpcode::COPY, N->getValueType(0),
                            N->getOperand(0));
       return;
+    case ISD::TargetFrameIndex:
+      N->setNodeId(-1);
+      return;
     case ISD::FrameIndex: {
       auto *FI = cast<FrameIndexSDNode>(N);
-      SDValue Ops[] = {
-          CurDAG->getTargetFrameIndex(FI->getIndex(), MVT::i16),
-          CurDAG->getTargetConstant(1, DL, MVT::i8),
-          CurDAG->getRegister(0, MVT::i16),
-          CurDAG->getSignedTargetConstant(0, DL, MVT::i32),
-          CurDAG->getRegister(0, MVT::i16)};
+      SDValue Ops[] = {CurDAG->getTargetFrameIndex(FI->getIndex(), MVT::i16),
+                       CurDAG->getTargetConstant(1, DL, MVT::i8),
+                       CurDAG->getRegister(0, MVT::i16),
+                       CurDAG->getSignedTargetConstant(0, DL, MVT::i32),
+                       CurDAG->getRegister(0, MVT::i16)};
       CurDAG->SelectNodeTo(N, X86::LEA16r, MVT::i16, Ops);
       return;
     }
@@ -254,8 +256,7 @@ public:
     case ISD::AND:
     case ISD::OR:
     case ISD::XOR:
-      if (N->getValueType(0) == MVT::i8 ||
-          N->getValueType(0) == MVT::i16) {
+      if (N->getValueType(0) == MVT::i8 || N->getValueType(0) == MVT::i16) {
         bool IsByte = N->getValueType(0) == MVT::i8;
         unsigned Opc = 0;
         switch (N->getOpcode()) {
@@ -284,14 +285,13 @@ public:
       break;
     case ISD::MUL:
       if (N->getValueType(0) == MVT::i16) {
-        SDValue InGlue =
-            CurDAG
-                ->getCopyToReg(CurDAG->getEntryNode(), DL, X86::AX,
-                               N->getOperand(0), SDValue())
-                .getValue(1);
+        SDValue InGlue = CurDAG
+                             ->getCopyToReg(CurDAG->getEntryNode(), DL, X86::AX,
+                                            N->getOperand(0), SDValue())
+                             .getValue(1);
         SDVTList VTs = CurDAG->getVTList(MVT::i16, MVT::i16, MVT::i32);
-        MachineSDNode *Mul = CurDAG->getMachineNode(
-            X86::MUL16r, DL, VTs, {N->getOperand(1), InGlue});
+        MachineSDNode *Mul = CurDAG->getMachineNode(X86::MUL16r, DL, VTs,
+                                                    {N->getOperand(1), InGlue});
         ReplaceUses(SDValue(N, 0), SDValue(Mul, 0));
         CurDAG->RemoveDeadNode(N);
         return;
@@ -299,18 +299,16 @@ public:
       break;
     case ISD::SMUL_LOHI:
     case ISD::UMUL_LOHI:
-      if (N->getValueType(0) == MVT::i16 &&
-          N->getValueType(1) == MVT::i16) {
-        SDValue InGlue =
-            CurDAG
-                ->getCopyToReg(CurDAG->getEntryNode(), DL, X86::AX,
-                               N->getOperand(0), SDValue())
-                .getValue(1);
+      if (N->getValueType(0) == MVT::i16 && N->getValueType(1) == MVT::i16) {
+        SDValue InGlue = CurDAG
+                             ->getCopyToReg(CurDAG->getEntryNode(), DL, X86::AX,
+                                            N->getOperand(0), SDValue())
+                             .getValue(1);
         SDVTList VTs = CurDAG->getVTList(MVT::i16, MVT::i16, MVT::i32);
-        unsigned Opc = N->getOpcode() == ISD::SMUL_LOHI ? X86::IMUL16r
-                                                        : X86::MUL16r;
-        MachineSDNode *Mul = CurDAG->getMachineNode(
-            Opc, DL, VTs, {N->getOperand(1), InGlue});
+        unsigned Opc =
+            N->getOpcode() == ISD::SMUL_LOHI ? X86::IMUL16r : X86::MUL16r;
+        MachineSDNode *Mul =
+            CurDAG->getMachineNode(Opc, DL, VTs, {N->getOperand(1), InGlue});
         ReplaceUses(SDValue(N, 0), SDValue(Mul, 0));
         ReplaceUses(SDValue(N, 1), SDValue(Mul, 1));
         CurDAG->RemoveDeadNode(N);
@@ -320,14 +318,12 @@ public:
     case ISD::SHL:
     case ISD::SRL:
     case ISD::SRA:
-      if (N->getValueType(0) == MVT::i8 ||
-          N->getValueType(0) == MVT::i16) {
+      if (N->getValueType(0) == MVT::i8 || N->getValueType(0) == MVT::i16) {
         MVT VT = N->getSimpleValueType(0);
         auto *Count = dyn_cast<ConstantSDNode>(N->getOperand(1));
         if (!Count) {
           SDValue CountCopy = CurDAG->getCopyToReg(
-              CurDAG->getEntryNode(), DL, X86::CL, N->getOperand(1),
-              SDValue());
+              CurDAG->getEntryNode(), DL, X86::CL, N->getOperand(1), SDValue());
           unsigned Opc = 0;
           if (N->getOpcode() == ISD::SHL)
             Opc = VT == MVT::i8 ? X86::SHL8rCL : X86::SHL16rCL;
@@ -382,24 +378,22 @@ public:
 
       unsigned CmpOpcode = VT == MVT::i8 ? X86::CMP8rr : X86::CMP16rr;
       SDNode *Cmp = CurDAG->getMachineNode(CmpOpcode, DL, MVT::Glue, LHS, RHS);
-      SDValue Ops[] = {
-          N->getOperand(4),
-          CurDAG->getTargetConstant(*CC, DL, MVT::i8),
-          N->getOperand(0), SDValue(Cmp, 0)};
+      SDValue Ops[] = {N->getOperand(4),
+                       CurDAG->getTargetConstant(*CC, DL, MVT::i8),
+                       N->getOperand(0), SDValue(Cmp, 0)};
       CurDAG->SelectNodeTo(N, X86::JCC_1, MVT::Other, Ops);
       return;
     }
     case ISD::LOAD: {
       auto *Load = cast<LoadSDNode>(N);
-      if (Load->getMemoryVT() != MVT::i8 &&
-          Load->getMemoryVT() != MVT::i16)
+      if (Load->getMemoryVT() != MVT::i8 && Load->getMemoryVT() != MVT::i16)
         break;
       SmallVector<SDValue, 6> Ops;
       if (!selectAddress(Load->getBasePtr(), DL, Ops))
         break;
       Ops.push_back(Load->getChain());
-      unsigned Opc = Load->getMemoryVT() == MVT::i8 ? X86::MOV8rm
-                                                    : X86::MOV16rm;
+      unsigned Opc =
+          Load->getMemoryVT() == MVT::i8 ? X86::MOV8rm : X86::MOV16rm;
       MVT VT = Load->getMemoryVT() == MVT::i8 ? MVT::i8 : MVT::i16;
       if (VT == MVT::i8 && Load->getValueType(0) == MVT::i16) {
         SDVTList VTs = CurDAG->getVTList(MVT::i8, MVT::Other);
@@ -420,16 +414,15 @@ public:
     }
     case ISD::STORE: {
       auto *Store = cast<StoreSDNode>(N);
-      if (Store->getMemoryVT() != MVT::i8 &&
-          Store->getMemoryVT() != MVT::i16)
+      if (Store->getMemoryVT() != MVT::i8 && Store->getMemoryVT() != MVT::i16)
         break;
       SmallVector<SDValue, 7> Ops;
       if (!selectAddress(Store->getBasePtr(), DL, Ops))
         break;
       Ops.push_back(Store->getValue());
       Ops.push_back(Store->getChain());
-      unsigned Opc = Store->getMemoryVT() == MVT::i8 ? X86::MOV8mr
-                                                     : X86::MOV16mr;
+      unsigned Opc =
+          Store->getMemoryVT() == MVT::i8 ? X86::MOV8mr : X86::MOV16mr;
       CurDAG->SelectNodeTo(N, Opc, MVT::Other, Ops);
       return;
     }

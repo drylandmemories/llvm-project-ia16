@@ -884,15 +884,22 @@ set(ve_SOURCES
 
 set(m68k_SOURCES ${GENERIC_SOURCES})
 
-# The initial IA-16 runtime slice provides the 32-bit division family and the
-# shift helpers needed by SelectionDAG legalization. Keep this list explicit:
-# the remaining generic builtins are added only as their 16-bit ABI lowering is
-# validated.
+# Keep the IA-16 list explicit: generic builtins are admitted only after their
+# 16-bit ABI lowering and transitive runtime dependencies are validated.
 set(ia16_SOURCES
+  ashldi3.c
+  ashrdi3.c
   divsi3.c
+  divdi3.c
+  lshrdi3.c
   modsi3.c
+  moddi3.c
+  muldi3.c
   udivsi3.c
+  udivdi3.c
+  udivmoddi4.c
   umodsi3.c
+  umoddi3.c
   ia16/ashlsi3.S
   ia16/ashrsi3.S
   ia16/lshrsi3.S

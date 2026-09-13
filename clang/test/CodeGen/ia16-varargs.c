@@ -45,12 +45,12 @@ long call_variadic(void) { return variadic_long(1, 0x12345678L); }
 // A variadic call uses the same right-to-left word layout as an ordinary
 // cdecl call, including high-then-low pushes for a 32-bit value.
 // CHECK-LABEL: call_variadic:
-// CHECK:       movw $4660, %ax
-// CHECK-NEXT:  pushw %ax
-// CHECK:       movw $22136, %ax
-// CHECK-NEXT:  pushw %ax
-// CHECK:       movw $1, %ax
-// CHECK-NEXT:  pushw %ax
+// CHECK:       movw $4660, [[HIGH:%[a-z]+]]
+// CHECK-NEXT:  movw $22136, [[LOW:%[a-z]+]]
+// CHECK-NEXT:  movw $1, [[COUNT:%[a-z]+]]
+// CHECK-NEXT:  pushw [[HIGH]]
+// CHECK-NEXT:  pushw [[LOW]]
+// CHECK-NEXT:  pushw [[COUNT]]
 // CHECK:       callw variadic_long
 // CHECK:       addw $6,
 // CHECK:       retw

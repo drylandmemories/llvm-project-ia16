@@ -11,6 +11,8 @@ near_pointer near_value;
 far_pointer far_value;
 huge_pointer huge_value;
 stack_pointer stack_value;
+long long aligned_long_long;
+double aligned_double;
 
 // CHECK: target datalayout = "e-m:e-p:16:16-p1:32:16:16:16-p2:32:16:16:32-p3:16:16-p4:16:16-p5:32:16:16:16-i32:16-i64:16-f32:16-f64:16-a:0:16-n8:16-S16"
 // CHECK: target triple = "ia16-unknown-none-elf"
@@ -18,6 +20,8 @@ stack_pointer stack_value;
 // CHECK: @far_value = global ptr addrspace(1) null, align 2
 // CHECK: @huge_value = global ptr addrspace(2) null, align 2
 // CHECK: @stack_value = global ptr addrspace(3) null, align 2
+// CHECK: @aligned_long_long = global i64 0, align 2
+// CHECK: @aligned_double = global double 0.000000e+00, align 2
 // CHECK: !"ia16-memory-model", !"small"
 // CHECK: !"ia16-protected-mode", i32 0
 
@@ -28,6 +32,8 @@ _Static_assert(sizeof(long) == 4, "long");
 _Static_assert(sizeof(long long) == 8, "long long");
 _Static_assert(sizeof(float) == 4, "float");
 _Static_assert(sizeof(double) == 8, "double");
+_Static_assert(_Alignof(long long) == 2, "long long alignment");
+_Static_assert(_Alignof(double) == 2, "double alignment");
 #ifndef IA16_HUGE
 _Static_assert(sizeof(void *) == 2, "near pointer");
 #endif

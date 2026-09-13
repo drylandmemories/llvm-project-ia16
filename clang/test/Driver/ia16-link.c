@@ -8,7 +8,7 @@
 // RUN: %python -c "import pathlib; print(pathlib.Path(r'%t.exe').read_bytes().hex())" \
 // RUN:   | FileCheck %s --check-prefix=MZHEX
 
-// COMHEX: c3
-// MZHEX: 4d5a21000100000002000000ffff0000feff0000000000001c00000000000000c3
+// COMHEX: 5589e55dc3
+// MZHEX: 4d5a25000100000002000000ffff0000feff0000000000001c000000000000005589e55dc3
 
 void _start(void) {}

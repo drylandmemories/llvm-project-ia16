@@ -52,11 +52,11 @@ struct five_bytes call_five(struct five_bytes value) {
 // CHECK:       movb ({{%[a-z]+}}),
 // CHECK:       xorw
 // CHECK:       movb
-// CHECK:       pushw
 // CHECK:       movw ({{%[a-z]+}}),
-// CHECK:       pushw
 // CHECK:       movw 4(%bp),
 // CHECK:       pushw
+// CHECK-NEXT:  pushw
+// CHECK-NEXT:  pushw
 // CHECK-NEXT:  callw external_endpoints
 // CHECK:       addw $6,
 // CHECK:       retw

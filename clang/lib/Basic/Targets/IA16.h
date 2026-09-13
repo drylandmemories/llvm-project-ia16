@@ -57,9 +57,14 @@ public:
     return TargetInfo::CharPtrBuiltinVaList;
   }
 
+  // The IA-16 ABI guarantees only word alignment, including for 64-bit
+  // scalars. Over-aligning automatic objects would require dynamic stack
+  // realignment that genuine 8086 code cannot implement with an AND immediate.
+  bool allowsLargerPreferedTypeAlignment() const override { return false; }
+
   IntType getIntTypeByWidth(unsigned BitWidth, bool IsSigned) const override;
   IntType getLeastIntTypeByWidth(unsigned BitWidth,
-                                bool IsSigned) const override;
+                                 bool IsSigned) const override;
 
 protected:
   uint64_t getPointerWidthV(LangAS AddrSpace) const override;

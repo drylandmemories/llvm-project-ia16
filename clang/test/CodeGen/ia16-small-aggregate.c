@@ -55,8 +55,8 @@ struct three_bytes call_three(struct three_bytes value) {
 // CHECK:       movb ({{%[a-z]+}}),
 // CHECK:       xorw
 // CHECK:       movb
-// CHECK:       pushw
 // CHECK:       movw 4(%bp),
+// CHECK-NEXT:  pushw
 // CHECK-NEXT:  pushw
 // CHECK-NEXT:  callw external_three
 // CHECK:       addw $4,

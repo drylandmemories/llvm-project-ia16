@@ -73,14 +73,14 @@ long call_long(long value) { return external_long(value, 5L); }
 // Arguments are pushed right-to-left, with each 32-bit scalar represented as
 // high then low pushes so memory at callee entry remains little-endian.
 // CHECK-LABEL: call_long:
-// CHECK:       movw $0, %ax
-// CHECK-NEXT:  pushw %ax
-// CHECK:       movw $5, %ax
-// CHECK-NEXT:  pushw %ax
-// CHECK:       movw 6(%bp), %ax
-// CHECK-NEXT:  pushw %ax
-// CHECK:       movw 4(%bp), %ax
-// CHECK-NEXT:  pushw %ax
+// CHECK:       movw $0, [[FIVE_HIGH:%[a-z]+]]
+// CHECK-NEXT:  movw $5, [[FIVE_LOW:%[a-z]+]]
+// CHECK-NEXT:  movw 6(%bp), [[ARG_HIGH:%[a-z]+]]
+// CHECK-NEXT:  movw 4(%bp), [[ARG_LOW:%[a-z]+]]
+// CHECK-NEXT:  pushw [[FIVE_HIGH]]
+// CHECK-NEXT:  pushw [[FIVE_LOW]]
+// CHECK-NEXT:  pushw [[ARG_HIGH]]
+// CHECK-NEXT:  pushw [[ARG_LOW]]
 // CHECK:       callw external_long
 // CHECK:       addw $8,
 // CHECK:       retw

@@ -12,11 +12,13 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
 bool IA16FrameLowering::hasFPImpl(const MachineFunction &MF) const {
-  return MF.getFrameInfo().getObjectIndexBegin() < 0 ||
+  return MF.getTarget().Options.DisableFramePointerElim(MF) ||
+         MF.getFrameInfo().hasStackObjects() ||
          MF.getFrameInfo().hasVarSizedObjects() ||
          MF.getFrameInfo().isFrameAddressTaken();
 }
