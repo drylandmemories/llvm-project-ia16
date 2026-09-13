@@ -60,4 +60,16 @@ TEST(RuntimeLibcallsTest, LibcallImplByName) {
   }
 }
 
+TEST(RuntimeLibcallsTest, IA16DefaultRuntime) {
+  RTLIB::RuntimeLibcallsInfo Info(Triple("ia16-unknown-none-elf"));
+  EXPECT_TRUE(Info.isAvailable(RTLIB::impl___divsi3));
+  EXPECT_TRUE(Info.isAvailable(RTLIB::impl___udivsi3));
+  EXPECT_TRUE(Info.isAvailable(RTLIB::impl___modsi3));
+  EXPECT_TRUE(Info.isAvailable(RTLIB::impl___umodsi3));
+  EXPECT_TRUE(Info.isAvailable(RTLIB::impl___muldi3));
+  EXPECT_TRUE(Info.isAvailable(RTLIB::impl___addsf3));
+  EXPECT_TRUE(Info.isAvailable(RTLIB::impl___adddf3));
+  EXPECT_TRUE(Info.isAvailable(RTLIB::impl_memcpy));
+}
+
 } // namespace

@@ -3513,6 +3513,14 @@ def WasmSystemLibrary
 // Legacy Default Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
+// IA-16 uses the compiler-rt/libgcc-compatible helper names for multiword
+// integer operations and software floating point. Its hosted sysroot provides
+// the libc entries from the same default set.
+def isIA16 : RuntimeLibcallPredicate<"TT.getArch() == Triple::ia16">;
+def IA16SystemLibrary
+    : SystemRuntimeLibrary<isIA16,
+      (add DefaultRuntimeLibcallImpls, DefaultStackProtector)>;
+
 // TODO: Should make every target explicit.
 def isDefaultLibcallArch : RuntimeLibcallPredicate<[{
   TT.isMIPS() || TT.isLoongArch() || TT.isVE() || TT.isBPF() ||

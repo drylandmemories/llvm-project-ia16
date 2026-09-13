@@ -8,6 +8,7 @@
 
 #include "IA16ISelLowering.h"
 #include "IA16Subtarget.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -197,11 +198,14 @@ SDValue IA16TargetLowering::LowerCall(
   Chain = SDValue(Call, 0);
   SDValue Glue(Call, 1);
 
-  for (const ISD::InputArg &In : CLI.Ins) {
+  for (auto [Index, In] : llvm::enumerate(CLI.Ins)) {
     if (In.VT != MVT::i16)
       report_fatal_error("unsupported IA-16 call result type");
+    if (Index > 1)
+      report_fatal_error("unsupported IA-16 multiword call result");
+    MCRegister ResultReg = Index == 0 ? X86::AX : X86::DX;
     SDValue Result =
-        DAG.getCopyFromReg(Chain, DL, X86::AX, MVT::i16, Glue);
+        DAG.getCopyFromReg(Chain, DL, ResultReg, MVT::i16, Glue);
     InVals.push_back(Result);
     Chain = Result.getValue(1);
     Glue = Result.getValue(2);
@@ -222,10 +226,13 @@ bool IA16TargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &, bool,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &,
     const Type *) const {
-  if (CallConv != CallingConv::C || Outs.size() > 1)
+  if (CallConv != CallingConv::C || Outs.size() > 2)
     return false;
-  return Outs.empty() || Outs.front().VT == MVT::i8 ||
-         Outs.front().VT == MVT::i16;
+  if (Outs.empty())
+    return true;
+  if (Outs.size() == 1)
+    return Outs.front().VT == MVT::i8 || Outs.front().VT == MVT::i16;
+  return Outs[0].VT == MVT::i16 && Outs[1].VT == MVT::i16;
 }
 
 SDValue IA16TargetLowering::LowerReturn(
@@ -238,10 +245,11 @@ SDValue IA16TargetLowering::LowerReturn(
     report_fatal_error("unsupported IA-16 return type");
 
   SmallVector<SDValue, 2> RetOps;
-  if (!Outs.empty()) {
-    MVT VT = Outs.front().VT;
-    MCRegister Reg = VT == MVT::i8 ? X86::AL : X86::AX;
-    Chain = DAG.getCopyToReg(Chain, DL, Reg, OutVals.front());
+  for (auto [Index, Out] : llvm::enumerate(Outs)) {
+    MVT VT = Out.VT;
+    MCRegister Reg = VT == MVT::i8 ? X86::AL
+                                   : Index == 0 ? X86::AX : X86::DX;
+    Chain = DAG.getCopyToReg(Chain, DL, Reg, OutVals[Index]);
     RetOps.push_back(DAG.getRegister(Reg, VT));
   }
   RetOps.push_back(Chain);

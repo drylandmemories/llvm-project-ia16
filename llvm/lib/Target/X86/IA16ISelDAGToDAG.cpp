@@ -97,6 +97,17 @@ public:
     case ISD::TokenFactor:
       N->setNodeId(-1);
       return;
+    case ISD::FrameIndex: {
+      auto *FI = cast<FrameIndexSDNode>(N);
+      SDValue Ops[] = {
+          CurDAG->getTargetFrameIndex(FI->getIndex(), MVT::i16),
+          CurDAG->getTargetConstant(1, DL, MVT::i8),
+          CurDAG->getRegister(0, MVT::i16),
+          CurDAG->getSignedTargetConstant(0, DL, MVT::i32),
+          CurDAG->getRegister(0, MVT::i16)};
+      CurDAG->SelectNodeTo(N, X86::LEA16r, MVT::i16, Ops);
+      return;
+    }
     case ISD::Constant: {
       auto *C = cast<ConstantSDNode>(N);
       EVT VT = N->getValueType(0);
@@ -181,6 +192,41 @@ public:
         }
         CurDAG->SelectNodeTo(N, Opc, N->getValueType(0), N->getOperand(0),
                              N->getOperand(1));
+        return;
+      }
+      break;
+    case ISD::MUL:
+      if (N->getValueType(0) == MVT::i16) {
+        SDValue InGlue =
+            CurDAG
+                ->getCopyToReg(CurDAG->getEntryNode(), DL, X86::AX,
+                               N->getOperand(0), SDValue())
+                .getValue(1);
+        SDVTList VTs = CurDAG->getVTList(MVT::i16, MVT::i16, MVT::i32);
+        MachineSDNode *Mul = CurDAG->getMachineNode(
+            X86::MUL16r, DL, VTs, {N->getOperand(1), InGlue});
+        ReplaceUses(SDValue(N, 0), SDValue(Mul, 0));
+        CurDAG->RemoveDeadNode(N);
+        return;
+      }
+      break;
+    case ISD::SMUL_LOHI:
+    case ISD::UMUL_LOHI:
+      if (N->getValueType(0) == MVT::i16 &&
+          N->getValueType(1) == MVT::i16) {
+        SDValue InGlue =
+            CurDAG
+                ->getCopyToReg(CurDAG->getEntryNode(), DL, X86::AX,
+                               N->getOperand(0), SDValue())
+                .getValue(1);
+        SDVTList VTs = CurDAG->getVTList(MVT::i16, MVT::i16, MVT::i32);
+        unsigned Opc = N->getOpcode() == ISD::SMUL_LOHI ? X86::IMUL16r
+                                                        : X86::MUL16r;
+        MachineSDNode *Mul = CurDAG->getMachineNode(
+            Opc, DL, VTs, {N->getOperand(1), InGlue});
+        ReplaceUses(SDValue(N, 0), SDValue(Mul, 0));
+        ReplaceUses(SDValue(N, 1), SDValue(Mul, 1));
+        CurDAG->RemoveDeadNode(N);
         return;
       }
       break;
