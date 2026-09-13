@@ -19,6 +19,15 @@ int load_global(void) { return global_word; }
 void store_global(int value) { global_word = value; }
 int load_pointer(const int *pointer) { return *pointer; }
 void store_pointer(int *pointer, int value) { *pointer = value; }
+unsigned int load_index(const unsigned int *pointer, unsigned int index) {
+  return pointer[index];
+}
+unsigned int shift_left(unsigned int value, unsigned int count) {
+  return value << count;
+}
+unsigned int shift_right(unsigned int value, unsigned int count) {
+  return value >> count;
+}
 
 // CHECK-LABEL: add:
 // CHECK:       pushw %bp
@@ -74,4 +83,20 @@ void store_pointer(int *pointer, int value) { *pointer = value; }
 // CHECK:       movw %bx, -2(%bp)
 // CHECK:       movw {{.*}}, ({{%([bs]x|bp|[sd]i)}})
 // CHECK:       movw -2(%bp), %bx
+// CHECK:       retw
+
+// CHECK-LABEL: load_index:
+// CHECK:       shlw
+// CHECK:       addw
+// CHECK:       movw ({{%([bs]x|bp|[sd]i)}}),
+// CHECK:       retw
+
+// CHECK-LABEL: shift_left:
+// CHECK:       movb {{.*}}, %cl
+// CHECK:       shlw %cl,
+// CHECK:       retw
+
+// CHECK-LABEL: shift_right:
+// CHECK:       movb {{.*}}, %cl
+// CHECK:       shrw %cl,
 // CHECK:       retw

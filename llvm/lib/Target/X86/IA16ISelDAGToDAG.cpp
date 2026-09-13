@@ -156,24 +156,44 @@ public:
     case ISD::SHL:
     case ISD::SRL:
     case ISD::SRA:
-      if (N->getValueType(0) == MVT::i16) {
+      if (N->getValueType(0) == MVT::i8 ||
+          N->getValueType(0) == MVT::i16) {
+        MVT VT = N->getSimpleValueType(0);
         auto *Count = dyn_cast<ConstantSDNode>(N->getOperand(1));
-        if (!Count)
-          break;
+        if (!Count) {
+          SDValue CountCopy = CurDAG->getCopyToReg(
+              CurDAG->getEntryNode(), DL, X86::CL, N->getOperand(1),
+              SDValue());
+          unsigned Opc = 0;
+          if (N->getOpcode() == ISD::SHL)
+            Opc = VT == MVT::i8 ? X86::SHL8rCL : X86::SHL16rCL;
+          else if (N->getOpcode() == ISD::SRL)
+            Opc = VT == MVT::i8 ? X86::SHR8rCL : X86::SHR16rCL;
+          else
+            Opc = VT == MVT::i8 ? X86::SAR8rCL : X86::SAR16rCL;
+          SDValue Ops[] = {N->getOperand(0), CountCopy.getValue(1)};
+          CurDAG->SelectNodeTo(N, Opc, VT, Ops);
+          return;
+        }
         unsigned Amount = Count->getZExtValue();
+        unsigned Width = VT.getSizeInBits();
         if (Amount == 0) {
           ReplaceNode(N, N->getOperand(0).getNode());
           return;
         }
-        if (Amount >= 16)
+        if (Amount >= Width)
           break;
-        unsigned Opc = N->getOpcode() == ISD::SHL   ? X86::SHL16r1
-                       : N->getOpcode() == ISD::SRL ? X86::SHR16r1
-                                                   : X86::SAR16r1;
+        unsigned Opc = 0;
+        if (N->getOpcode() == ISD::SHL)
+          Opc = VT == MVT::i8 ? X86::SHL8r1 : X86::SHL16r1;
+        else if (N->getOpcode() == ISD::SRL)
+          Opc = VT == MVT::i8 ? X86::SHR8r1 : X86::SHR16r1;
+        else
+          Opc = VT == MVT::i8 ? X86::SAR8r1 : X86::SAR16r1;
         SDNode *Result = N->getOperand(0).getNode();
         SDValue Value = N->getOperand(0);
         for (unsigned I = 0; I != Amount; ++I) {
-          Result = CurDAG->getMachineNode(Opc, DL, MVT::i16, Value);
+          Result = CurDAG->getMachineNode(Opc, DL, VT, Value);
           Value = SDValue(Result, 0);
         }
         ReplaceNode(N, Result);
