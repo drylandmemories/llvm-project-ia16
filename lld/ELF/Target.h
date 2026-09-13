@@ -40,6 +40,10 @@ public:
   virtual void writeGotPlt(uint8_t *buf, const Symbol &s) const {}
   virtual void writeIgotPlt(uint8_t *buf, const Symbol &s) const {}
   virtual int64_t getImplicitAddend(const uint8_t *buf, RelType type) const;
+  // Give targets a chance to reject malformed fields before reading or writing.
+  virtual bool validateRelocation(InputSectionBase &, RelType, uint64_t) const {
+    return true;
+  }
   virtual int getTlsGdRelaxSkip(RelType type) const { return 1; }
 
   // If lazy binding is supported, the first entry of the PLT has code

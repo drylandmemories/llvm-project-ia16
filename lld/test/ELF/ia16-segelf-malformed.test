@@ -1,0 +1,214 @@
+# REQUIRES: x86
+# RUN: yaml2obj --docnum=1 %s -o %t.seg16.o
+# RUN: not ld.lld -m elf_i386 --entry=0 %t.seg16.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=SEG16
+# RUN: yaml2obj --docnum=2 %s -o %t.huge8.o
+# RUN: not ld.lld -m elf_i386 --entry=0 %t.huge8.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=HUGE8
+# RUN: yaml2obj --docnum=3 %s -o %t.sub16.o
+# RUN: not ld.lld -m elf_i386 --entry=0 %t.sub16.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=SUB16
+# RUN: yaml2obj --docnum=8 %s -o %t.sub32.o
+# RUN: not ld.lld -m elf_i386 --entry=0 %t.sub32.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=SUB32
+# RUN: yaml2obj --docnum=4 %s -o %t.seg16-nonalloc.o
+# RUN: not ld.lld -m elf_i386 --entry=0 %t.seg16-nonalloc.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=SEG16-NONALLOC
+# RUN: yaml2obj --docnum=5 %s -o %t.huge8-nonalloc.o
+# RUN: not ld.lld -m elf_i386 --entry=0 %t.huge8-nonalloc.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=HUGE8-NONALLOC
+# RUN: yaml2obj --docnum=6 %s -o %t.sub16-nonalloc.o
+# RUN: not ld.lld -m elf_i386 --entry=0 %t.sub16-nonalloc.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=SUB16-NONALLOC
+# RUN: yaml2obj --docnum=7 %s -o %t.sub32-nonalloc.o
+# RUN: not ld.lld -m elf_i386 --entry=0 %t.sub32-nonalloc.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=SUB32-NONALLOC
+
+# SEG16: error: {{.*}}:(.data+0x2): relocation R_386_SEG16 requires a 2-byte field, but the section has 0 bytes available
+# HUGE8: error: {{.*}}:(.data+0x1): relocation R_386_HUGE8 requires a 1-byte field, but the section has 0 bytes available
+# SUB16: error: {{.*}}:(.data+0x2): relocation R_386_SUB16 requires a 2-byte field, but the section has 0 bytes available
+# SUB32: error: {{.*}}:(.data+0x4): relocation R_386_SUB32 requires a 4-byte field, but the section has 0 bytes available
+# SEG16-NONALLOC: error: {{.*}}:(.debug_data+0x2): relocation R_386_SEG16 requires a 2-byte field, but the section has 0 bytes available
+# HUGE8-NONALLOC: error: {{.*}}:(.debug_data+0x1): relocation R_386_HUGE8 requires a 1-byte field, but the section has 0 bytes available
+# SUB16-NONALLOC: error: {{.*}}:(.debug_data+0x2): relocation R_386_SUB16 requires a 2-byte field, but the section has 0 bytes available
+# SUB32-NONALLOC: error: {{.*}}:(.debug_data+0x4): relocation R_386_SUB32 requires a 4-byte field, but the section has 0 bytes available
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .data
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Content: "0000"
+  - Name: .rel.data
+    Type: SHT_REL
+    Link: .symtab
+    Info: .data
+    Relocations:
+      - Offset: 2
+        Symbol: target
+        Type: R_386_SEG16
+Symbols:
+  - Name: target
+    Index: SHN_ABS
+    Value: 0x12345
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .data
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Content: "00"
+  - Name: .rel.data
+    Type: SHT_REL
+    Link: .symtab
+    Info: .data
+    Relocations:
+      - Offset: 1
+        Symbol: target
+        Type: R_386_HUGE8
+Symbols:
+  - Name: target
+    Index: SHN_ABS
+    Value: 0x12345
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .data
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Content: "0000"
+  - Name: .rel.data
+    Type: SHT_REL
+    Link: .symtab
+    Info: .data
+    Relocations:
+      - Offset: 2
+        Symbol: target
+        Type: R_386_SUB16
+Symbols:
+  - Name: target
+    Index: SHN_ABS
+    Value: 1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .debug_data
+    Type: SHT_PROGBITS
+    Content: "0000"
+  - Name: .rel.debug_data
+    Type: SHT_REL
+    Link: .symtab
+    Info: .debug_data
+    Relocations:
+      - Offset: 2
+        Symbol: target
+        Type: R_386_SEG16
+Symbols:
+  - Name: target
+    Index: SHN_ABS
+    Value: 0x12345
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .debug_data
+    Type: SHT_PROGBITS
+    Content: "00"
+  - Name: .rel.debug_data
+    Type: SHT_REL
+    Link: .symtab
+    Info: .debug_data
+    Relocations:
+      - Offset: 1
+        Symbol: target
+        Type: R_386_HUGE8
+Symbols:
+  - Name: target
+    Index: SHN_ABS
+    Value: 0x12345
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .debug_data
+    Type: SHT_PROGBITS
+    Content: "0000"
+  - Name: .rel.debug_data
+    Type: SHT_REL
+    Link: .symtab
+    Info: .debug_data
+    Relocations:
+      - Offset: 2
+        Symbol: target
+        Type: R_386_SUB16
+Symbols:
+  - Name: target
+    Index: SHN_ABS
+    Value: 1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .debug_data
+    Type: SHT_PROGBITS
+    Content: "00000000"
+  - Name: .rel.debug_data
+    Type: SHT_REL
+    Link: .symtab
+    Info: .debug_data
+    Relocations:
+      - Offset: 4
+        Symbol: target
+        Type: R_386_SUB32
+Symbols:
+  - Name: target
+    Index: SHN_ABS
+    Value: 1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .data
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Content: "00000000"
+  - Name: .rel.data
+    Type: SHT_REL
+    Link: .symtab
+    Info: .data
+    Relocations:
+      - Offset: 4
+        Symbol: target
+        Type: R_386_SUB32
+Symbols:
+  - Name: target
+    Index: SHN_ABS
+    Value: 1

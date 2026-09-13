@@ -26,6 +26,8 @@ public:
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
+  bool validateRelocation(InputSectionBase &sec, RelType type,
+                          uint64_t offset) const override;
   void writeGotPltHeader(uint8_t *buf) const override;
   RelType getDynRel(RelType type) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
@@ -290,6 +292,35 @@ int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
     InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
+}
+
+bool X86::validateRelocation(InputSectionBase &sec, RelType type,
+                             uint64_t offset) const {
+  unsigned fieldSize;
+  switch (type) {
+  case R_386_HUGE8:
+    fieldSize = 1;
+    break;
+  case R_386_SEG16:
+  case R_386_SUB16:
+    fieldSize = 2;
+    break;
+  case R_386_SUB32:
+    fieldSize = 4;
+    break;
+  default:
+    return true;
+  }
+
+  const uint64_t sectionSize = sec.getSize();
+  const uint64_t available = offset < sectionSize ? sectionSize - offset : 0;
+  if (offset <= sectionSize && fieldSize <= available)
+    return true;
+
+  Err(ctx) << sec.getLocation(offset) << ": relocation " << type
+           << " requires a " << fieldSize << "-byte field, but the section has "
+           << available << " bytes available";
+  return false;
 }
 
 void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {

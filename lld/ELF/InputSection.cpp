@@ -1084,6 +1084,8 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
     const RelTy &rel = *it;
     const RelType type = rel.getType(ctx.arg.isMips64EL);
     const uint64_t offset = rel.r_offset;
+    if (!target.validateRelocation(*this, type, offset))
+      continue;
     uint8_t *bufLoc = buf + offset;
     int64_t addend = getAddend<ELFT>(rel);
     if (!RelTy::HasAddend)
