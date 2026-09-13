@@ -1,8 +1,9 @@
 {
-  "schema": 1,
+  "schema": 2,
   "project_id": "llvm-ia16-target",
   "repository": "https://github.com/llvm/llvm-project.git",
-  "template_version": "1.1.1",
-  "template_digest": "8065099ee4a84eaf9aed5caf1dfb4d61554bc619f1522a02957a85176798a50a",
-  "required_references": []
+  "template_version": "2.0.0",
+  "template_digest": "aec810ecb8a1aa788aa3c0b9de7b164fb73a9eada71de6898284fd0e8c79f3cb",
+  "required_references": [],
+  "system": "artifex"
 }

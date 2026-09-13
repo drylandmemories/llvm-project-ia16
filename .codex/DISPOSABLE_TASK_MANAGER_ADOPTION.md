@@ -1,13 +1,25 @@
 # Disposable Task Manager adoption
 
-Status: **v1.1.1 pinned for new capsules; acceptance is in `agent-state/CURRENT.md`**
+Status: **Artifex 2.0.0 pinned for fresh capsules**
 
 ## Immutable release
 
-- Package: `/Users/tedbullock/Developer/CodexTaskSystem/releases/1.1.1/software-task`
-- Digest: `8065099ee4a84eaf9aed5caf1dfb4d61554bc619f1522a02957a85176798a50a`
-- Release: `software-task-v1.1.1`
-- Reviewed source: `f3598929281d2e5e4c8eac9983ebbf6c1a29bdb4`
+- Package: `/Users/tedbullock/Developer/Artifex/releases/2.0.0/artifex`
+- Digest: `aec810ecb8a1aa788aa3c0b9de7b164fb73a9eada71de6898284fd0e8c79f3cb`
+- Entry point: `$artifex`; validator: `scripts/artifex.py` in that package.
+- Adoption identity: schema 2, system `artifex`, stable project `llvm-ia16-target`,
+  exact origin `https://github.com/llvm/llvm-project.git`.
+
+Historical v1 capsules continue using `$software-task` and their original
+immutable packages, including
+`/Users/tedbullock/Developer/CodexTaskSystem/releases/1.1.1/software-task`
+(digest `8065099ee4a84eaf9aed5caf1dfb4d61554bc619f1522a02957a85176798a50a`).
+Keep all historical capsules and releases unchanged, including partial and
+superseded tasks. A migration does not authorize resuming their product work.
+The Git-common ledger `software-task-state.json` and corresponding lock keep
+their existing names: these are the Artifex 2.0 compatibility ABI.
+CURRENT remains the revisioned product-evidence snapshot; its historical
+package fields do not override the active pin in `task-system.json` and PROJECT.
 
 Use this versioned script; the global skill is only an entry point. Never copy, fork, or vendor the package.
 
