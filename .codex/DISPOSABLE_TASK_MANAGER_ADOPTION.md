@@ -8,7 +8,12 @@ Status: **Artifex 3.1.1 pinned for fresh capsules**
 - Digest: `2712dc55b4fdc3428e4ae13c8be55eca174f81663e7923ec5a059f59ca90316a`
 - Entry point: `$artifex`; validator: `scripts/artifex.py` in that package.
 - Adoption identity: schema 2, system `artifex`, stable project `llvm-ia16-target`,
-  exact origin `https://github.com/llvm/llvm-project.git`.
+  exact origin `https://github.com/drylandmemories/llvm-project-ia16.git`.
+- The official `https://github.com/llvm/llvm-project.git` repository is the
+  upstream source, not the Artifex collaboration destination. Automatic
+  synchronization may fast-forward the fork's pristine upstream-tracking
+  branch; it does not authorize writes to official LLVM or automatic rebases of
+  IA-16 development branches.
 
 Historical v1 capsules continue using `$software-task` and their original
 immutable packages, including

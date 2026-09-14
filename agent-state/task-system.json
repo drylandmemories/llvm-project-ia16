@@ -1,6 +1,6 @@
 {
   "project_id": "llvm-ia16-target",
-  "repository": "https://github.com/llvm/llvm-project.git",
+  "repository": "https://github.com/drylandmemories/llvm-project-ia16.git",
   "required_references": [],
   "schema": 2,
   "system": "artifex",
