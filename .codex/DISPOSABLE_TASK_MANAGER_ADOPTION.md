@@ -1,11 +1,11 @@
 # Disposable Task Manager adoption
 
-Status: **Artifex 2.0.0 pinned for fresh capsules**
+Status: **Artifex 3.1.1 pinned for fresh capsules**
 
 ## Immutable release
 
-- Package: `/Users/tedbullock/Developer/Artifex/releases/2.0.0/artifex`
-- Digest: `aec810ecb8a1aa788aa3c0b9de7b164fb73a9eada71de6898284fd0e8c79f3cb`
+- Package: `/Users/tedbullock/.local/share/artifex/packages/3.1.1/2712dc55b4fdc3428e4ae13c8be55eca174f81663e7923ec5a059f59ca90316a/artifex`
+- Digest: `2712dc55b4fdc3428e4ae13c8be55eca174f81663e7923ec5a059f59ca90316a`
 - Entry point: `$artifex`; validator: `scripts/artifex.py` in that package.
 - Adoption identity: schema 2, system `artifex`, stable project `llvm-ia16-target`,
   exact origin `https://github.com/llvm/llvm-project.git`.
@@ -17,7 +17,7 @@ immutable packages, including
 Keep all historical capsules and releases unchanged, including partial and
 superseded tasks. A migration does not authorize resuming their product work.
 The Git-common ledger `software-task-state.json` and corresponding lock keep
-their existing names: these are the Artifex 2.0 compatibility ABI.
+their existing names: these are the Artifex compatibility ABI.
 CURRENT remains the revisioned product-evidence snapshot; its historical
 package fields do not override the active pin in `task-system.json` and PROJECT.
 
