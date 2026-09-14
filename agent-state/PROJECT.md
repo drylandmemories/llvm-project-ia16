@@ -3,7 +3,7 @@
 Project-ID: llvm-ia16-target
 Repository: https://github.com/llvm/llvm-project.git
 Task-System: artifex
-Task-System-Version: 3.1.0
+Task-System-Version: 3.1.1
 
 This project owns the IA-16 target implementation, target-specific tests, ABI and code-generation decisions, and evidence for upstream integration. General LLVM or Clang cleanup is outside scope unless a task explicitly admits it.
 
