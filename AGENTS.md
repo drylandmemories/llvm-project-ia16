@@ -13,7 +13,11 @@
 - No permanent managers, standing teams, recursive delegation, or dependency on old conversations. Finish with durable state and a compact handoff, then retire.
 - A bounded capsule limits the current task's writes; it does not erase a broader, still-valid user instruction to advance this roadmap through sequential disposable tasks. Before ending, distinguish terminal completion from a required successor, preserve the exact continuation authority in that successor's capsule, and complete the project handoff protocol in `agent-state/SERIAL_WORKFLOW.md`.
 - The project-local adoption owner is `.codex/agents/disposable-task-adoption-owner.toml`. Invoke it only for a bounded migration or repair of this project's task-management layer.
-- Fresh tasks use `$artifex` with the pinned shared Feature/Bug skill and capsule tooling; historical v1 capsules keep their pinned `$software-task` package. Never copy, fork, vendor, or recreate either package here.
+<!-- artifex:begin -->
+Use $artifex for new tasks. Resolve the immutable package pinned by agent-state/task-system.json.
+Preserve historical capsules and their original packages.
+<!-- artifex:end -->
+Never copy, fork, vendor, or recreate the shared packages here.
 - Read `.codex/DISPOSABLE_TASK_MANAGER_ADOPTION.md` before changing this local integration.
 
 ## State and evidence
