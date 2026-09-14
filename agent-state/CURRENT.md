@@ -2,23 +2,21 @@
 
 Schema: 1
 Project-ID: llvm-ia16-target
-Revision: 25
-Verified-At: 2026-09-13T22:15:27Z
+Revision: 26
+Verified-At: 2026-09-14T01:26:11Z
 Verified-Against: 08dbcfa107579d813fb2dabb724a4fe321d3c053
-Evidence-Layer: reviewed-source-build-selected-test-malformed-input-repair
+Evidence-Layer: reviewed-source-build-selected-test-and-management-state
 
-Owner: accepted malformed SEGELF bounds repair; paused at Ted request
-Task-System-Status: adopted-artifex-2.0.0
-Package-Digest: aec810ecb8a1aa788aa3c0b9de7b164fb73a9eada71de6898284fd0e8c79f3cb
+Owner: Artifex 3.1.1 local repair accepted; compiler work paused by Ted
+Task-System-Status: adopted-artifex-3.1.1
+Package-Digest: 2712dc55b4fdc3428e4ae13c8be55eca174f81663e7923ec5a059f59ca90316a
 Gate-1: incomplete; malformed SEGELF bounds repair accepted; remaining requirements pending
 Gate-2: incomplete
 Gate-3: incomplete
 Gate-4: incomplete
 Gate-5: incomplete
 Execution-Mode: serial-same-checkout-two-workers-one-heavy-process
-Blocker: none for the completed repair; broader work intentionally paused
-
-Prior accepted SEGELF milestones remain recorded in the evidence register.
+Blocker: none; broader product work paused
 
 Malformed relocation-field bounds are independently accepted at
 `08dbcfa107579d813fb2dabb724a4fe321d3c053`. An i386-only early pass
@@ -29,6 +27,9 @@ partial-tail, and very-large-offset cases fail closed; and the ten retained
 IA-16 LLD regressions plus the new test pass 11/11 with two workers. Nonauthor
 review accepted the exact candidate after rejecting and correcting earlier
 validation bypasses.
+
+Artifex 3.1.1 metadata was reconciled at
+`58a5af20b2abdca9216a36d77e3a8d28082dde6d`; admission-readiness only.
 
 Other malformed cases, retention proof, and other Gate 1 requirements remain
 open. No broad integration, emulator runtime, release, or external acceptance.
